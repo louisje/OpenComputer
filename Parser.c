@@ -1,27 +1,24 @@
 #include "Parser.h"
 /*
 BASE_LIST = BASE*
-BASE = IF | FOR | WHILE | STMT ; | CLASS | METHOD | (PATH? (=> VAR_LIST)?)? BLOCK
+BASE = IF | FOR | WHILE | METHOD | BLOCK | STMT ;
 IF = if (EXP) BASE (else BASE)?
 FOR = for ( STMT ; EXP ; STMT) BASE
 WHILE = while (EXP) BASE
-STMT = (return|yield|throw) ITEM | PATH = EXP
-CLASS = class Id is Id BLOCK
-METHOD = def Id(VAR_LIST?) BLOCK
+METHOD = def Id(ID_LIST?) BLOCK
+STMT = return EXP | id '=' EXP | id ('++'|'--')
 BLOCK = { BASE_LIST }
 EXP =  ( EXP Op2 EXP ) | ITEM (Op2 ITEM)?
-ITEM = Int | Float | String | Id Op1? | PATH
-PATH = Id(EXP_LIST?)? (. Id(EXP_LIST?)? )*
+ITEM = Int | Float | String | Id Op1? | Id(EXP_LIST?)?
 EXP_LIST = EXP (, EXP)*
-VAR_LIST = VAR (, VAR)*
-VAR = Id (= EXP)?
+ID_LIST = id (, id)*
 
 Id = [A-Za-z_][0-9A-Za-z_]*
 Int = [0-9]+
 Float = [0-9]+.[0-9]+
 String = ".*"
 Op2 = [+-/*%&|^><=|'<<'|'>>']
-Op1 = (++ | --)
+Op1 = ++ | --
 */
 
 Parser *parse(char *text) {        // 剖析器的主要函數
@@ -31,29 +28,27 @@ Parser *parse(char *text) {        // 剖析器的主要函數
 }
 
 char* nextToken(Parser *p);
-char *tokenToType(char *token);
+char* tokenToType(char *token);
 Tree* push(Parser *p, char* term);
 Tree* pop(Parser *p, char* term);
-Tree *parseBaseList(Parser *p);
+Tree* parseBaseList(Parser *p);
 void parseBlock(Parser *p);
 void parseFor(Parser *p);
 void parseIf(Parser *p);
 void parseWhile(Parser *p);
 void parseBase(Parser *p);
 void parseStmt(Parser *p);
-void parsePath(Parser *p);
+void parseAssign(Parser *p);
+void parseCall(Parser *p);
 void parseExp(Parser *p);
-void parseClass(Parser *p);
 void parseMethod(Parser *p);
 void parseItem(Parser *p);
-void parseVar(Parser *p);
-void parseArgList(Parser *p);
-void parseVarList(Parser *p);
+void parseExpList(Parser *p);
 void error();
 BOOL isEnd(Parser *p);
 BOOL isNext(Parser *p, char *pTypes);
 char *next(Parser *p, char *pTypes);
-void prev(Parser *p);
+// void prev(Parser *p);
 
 Parser *ParserNew() {
   Parser *parser = ObjNew(Parser, 1);
@@ -97,46 +92,33 @@ Tree *parseBaseList(Parser *p) {             // 剖析 PROG=BaseList 規則
   pop(p, "BASE_LIST");                       // 取出 BaseList 的剖析樹
 }                                           // 取出 PROG 的剖析樹
 
-// BASE = IF | FOR | CLASS | METHOD | BLOCK | STMT ; 
+// BASE = IF | FOR | WHILE | METHOD | BLOCK | STMT ;
 void parseBase(Parser *p) {                 // 剖析 BASE 規則
   push(p, "BASE");                          // 建立 BASE 的剖析樹
   if (isNext(p, "if"))                      // 如果下一個詞彙是 if
     parseIf(p);                             //  根據 if 規則進行剖析
   else if (isNext(p, "for"))                // 如果下一個詞彙是 for
     parseFor(p);                            //  根據 FOR 規則進行剖析
-  else if (isNext(p, "class"))              // 如果下一個詞彙是 class
-    parseClass(p);                          //  根據 class 規則進行剖析
+  else if (isNext(p, "while"))                // 如果下一個詞彙是 for
+    parseWhile(p);                            //  根據 FOR 規則進行剖析
   else if (isNext(p, "def"))                // 如果下一個詞彙是 def
     parseMethod(p);                         //  根據 method 規則進行剖析
   else if (isNext(p, "{"))
     parseBlock(p);
-  else {                                    // 否則
+  else {                                     // 否則
     parseStmt(p);                           //  根據 STMT 規則進行剖析
-    next(p, ";");                           //  取得 ;
+	next(p, ";");
   }
   pop(p, "BASE");                           // 取出 BASE 的剖析樹
 }
 
-// BLOCK = '{' BaseList '}'
+// BLOCK = { BASE_LIST }
 void parseBlock(Parser *p) {
   push(p, "BLOCK");
   next(p, "{");
   parseBaseList(p);
   next(p, "}");
   pop(p, "BLOCK");
-}
-
-// CLASS = class Id (is Id)? BLOCK
-void parseClass(Parser *p) {
-  push(p, "CLASS");
-  next(p, "class");
-  next(p, ID);
-  if (isNext(p, "is")) {
-    next(p, "is");
-    next(p, ID);
-  }
-  parseBlock(p);
-  pop(p, "CLASS");
 }
 
 // METHOD = def Id(ID_LIST?) BLOCK
@@ -146,18 +128,18 @@ void parseMethod(Parser *p) {
   next(p, ID);
   next(p, "(");
   if (!isNext(p, ")"))
-    parseVarList(p);
+    parseIdList(p);
   next(p, ")");
   parseBlock(p);
   pop(p, "METHOD");
 }
 
-// FOR = for ( STMT ; EXP ; STMT) BASE | for Id in EXP BASE
+// FOR = for ( STMT ; EXP ; STMT) BASE
 void parseFor(Parser *p) {                  // 建立 FOR 的樹根
   push(p, "FOR");                           // 取得 for
   next(p, "for");                           // 取得 (
   next(p, "(");                             // 剖析 STMT
-  parseStmt(p);                             // 取得 ;
+  parseStmt(p);                           // 取得 ;
   next(p, ";");                             // 剖析 COND
   parseExp(p);                              // 取得 ;
   next(p, ";");                             // 剖析 STMT
@@ -193,32 +175,43 @@ void parseWhile(Parser *p) {                  // 建立 FOR 的樹根
   pop(p, "WHILE");
 }
 
-// STMT = (return|yield|throw) PATH | PATH = PATH
+// STMT = return EXP | id '=' EXP | id ('++'|'--')
 void parseStmt(Parser *p) {
   push(p, "STMT");
-  if (isNext(p, "return|yield|throw")) {
-    next(p, "return|yield|throw");
-    parsePath(p);
+  if (isNext(p, "return")) {
+    next(p, "return");
+    parseExp(p);
   } else {
-    parsePath(p);
-    if (isNext(p, "=")) {
+    next(p, "id");
+	if (isNext(p, "=")) {
       next(p, "=");
-      parsePath(p);
-    }
+      parseExp(p);
+	} else
+	  next(p, OP1);
   }
   pop(p, "STMT");
 }
 
-// PATH = EXP (. EXP)*
-void parsePath(Parser *p) {
-  push(p, "PATH");
-//  if (isNext(p, ".")) next(p, ".");
+// ASSIGN = id = EXP
+void parseAssign(Parser *p) {
+  push(p, "ASSIGN");
+  next(p, ID);
+  next(p, "=");
   parseExp(p);
-  while (isNext(p, ".")) {\
-    next(p, ".");
-    parseExp(p);
+  pop(p, "ASSIGN");
+}
+
+// CALL = Id(EXP_LIST?)?
+void parseCall(Parser *p) {
+  push(p, "CALL");
+  next(p, "id");
+  if (isNext(p, "(")) {
+    next(p, "(");
+    if (!isNext(p, ")"))
+      parseExpList(p);
+    next(p, ")");
   }
-  pop(p, "PATH");  
+  pop(p, "CALL");  
 }
 
 // EXP =  ( EXP Op EXP ) | ITEM (Op ITEM)?
@@ -240,7 +233,7 @@ void parseExp(Parser *p) {
   pop(p, "EXP");
 }
 
-// ITEM = Int | Float | String | Id (++|--)? | Id(ARG_LIST?) | Id
+// ITEM = Int | Float | String | Id OP1? | Id(EXP_LIST?)?
 void parseItem(Parser *p) {
   push(p, "ITEM");
   if (isNext(p, INTEGER))
@@ -251,49 +244,38 @@ void parseItem(Parser *p) {
     next(p, STRING);
   else if (isNext(p, ID)) {
     next(p, ID);
-    if (isNext(p, OP1))
-      next(p, OP1);
-    else if (isNext(p, "(")) {
+	if (isNext(p, OP1))
+	  next(p, OP1);
+	else if (isNext(p, "(")) {
       next(p, "(");
-      if (isNext(p, ID))
-        parseArgList(p);
-      next(p, ")");
-    }
+	  if (!isNext(p, ")"))
+	    parseExpList(p);
+	  next(p, ")");
+	}
   }
   pop(p, "ITEM");
 }
 
-// ARG_LIST = PATH (, PATH)*
-void parseArgList(Parser *p) {
-  push(p, "ARG_LIST");
-  parsePath(p);
+// EXP_LIST = EXP (, EXP)*
+void parseExpList(Parser *p) {
+  push(p, "EXP_LIST");
+  parseExp(p);
   while (isNext(p, ",")) {
     next(p, ",");
-    parsePath(p);
+    parseExp(p);
   }
-  pop(p, "ARG_LIST");  
+  pop(p, "EXP_LIST");  
 }
 
-// VAR_LIST = VAR (, VAR)*
-void parseVarList(Parser *p) {
-  push(p, "VAR_LIST");
-  parseVar(p);
-  while (isNext(p, ",")) {
-    next(p, ",");
-    parseVar(p);
-  }
-  pop(p, "VAR_LIST");
-}
-
-// VAR = Id (= PATH)?
-void parseVar(Parser *p) {
-  push(p, "VAR");
+// ID_LIST = id (, id)*
+void parseIdList(Parser *p) {
+  push(p, "ID_LIST");
   next(p, ID);
-  if (isNext(p, "=")) {
-    next(p, "=");
-    parsePath(p);
+  while (isNext(p, ",")) {
+    next(p, ",");
+    next(p, ID);
   }
-  pop(p, "VAR");
+  pop(p, "ID_LIST");  
 }
 
 char* level(Parser *p) {
@@ -319,7 +301,7 @@ BOOL isNext(Parser *p, char *pTypes) {
   else
     return FALSE;
 }
-
+/*
 void prev(Parser *p) {
     Tree *parentTree = ArrayPeek(p->stack);                   //   取得父節點，
     Tree *last = ArrayPop(parentTree->childs);
@@ -327,7 +309,7 @@ void prev(Parser *p) {
     printf("%s prev()\n", level(p));
     p->tokenIdx--;
 }
-
+*/
 char *next(Parser *p, char *pTypes) {                         // 檢查下一個詞彙的型態
   char *token = nextToken(p);                                 // 取得下一個詞彙
   if (isNext(p, pTypes)) {                                    // 如果是pTypes型態之一

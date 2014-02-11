@@ -24,12 +24,12 @@ int main(int argc, char *argv[]) {                              // 主程式開始
 //  system("pause");
 //  HashTableTest();                                              //   測試雜湊表物件              
 //  OpTableTest();                                                //   測試指令表物件              
-  
-  compile(cFile, asmFile);                                      //   測試編譯器                  
-//  system("pause");
-//  assemble(asmFile, objFile);                                   //   測試組譯器                  
-//  system("pause");
-//  execute(objFile, 0);                                          //   測試虛擬機器    
+    printf("cFile=%s asmFile=%s\n", cFile, asmFile);
+    compile(cFile, asmFile);                                      //   測試編譯器                  
+    system("pause");
+    assemble(asmFile, objFile);                                   //   測試組譯器                  
+    system("pause");
+    execute(objFile, 0);                                          //   測試虛擬機器    
 
 /*
   assemble(osAsmFile, osObjFile);

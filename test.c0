@@ -1,28 +1,9 @@
-class Stack {
-  array = Array.new();
-  top = 0;
-  name = "Stack";
-  
-  def push(o = null) {
-    array.add(o);
-  }
-  
-  def pop() {
-    if (top > 0)
-	  return array(top--);
-	else
-	  throw Error.new();
-  }
-  
-  def each() {
-    for (i=0; i<top; i++)
-	  yield array(i);
-  }
-  
-  def sum() {
+return sum;
+
+def sum(n)
+{
     sum = 0;
-    for (i=0; i<=top; i++)
-      sum = sum + array(i);
+    for (i=0; i<=n; i++)
+      sum = sum + i;
     return sum;
-  }
 }

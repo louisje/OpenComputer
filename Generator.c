@@ -35,7 +35,8 @@ Tree* GenCode(Generator *g, Tree *node, char *rzVar) {                          
   if (node == NULL) return NULL;                                                // 遞迴終止條件。                     
                                                                                                                    
   if (strEqual(node->type, "FOR")) {                                            // 處理 FOR 節點                      
-    // FOR ::= 'for' '(' STMT ';' COND ';' STMT ')' BLOCK                                                
+    // FOR = for ( STMT ; EXP ; STMT) BASE
+	// FOR ::= 'for' '(' STMT ';' COND ';' STMT ')' BLOCK                                                
     char forBeginLabel[100], forEndLabel[100], condOp[100];                     
     Tree *stmt1 = node->childs->item[2],                                        // 取得子節點                         
          *cond  = node->childs->item[4],                                                                           
@@ -56,7 +57,7 @@ Tree* GenCode(Generator *g, Tree *node, char *rzVar) {                          
     GenPcode(g, forEndLabel, "", "", "", "");                                   // 中間碼：例如 _FOR1    
     return NULL;                                                                                      
   } else if (strEqual(node->type, "STMT")) {                                    // 處理 STMT 節點          
-    //   STMT = return id | id '=' EXP | id ('++'|'--')                                              
+    // STMT = return id | id '=' EXP | id ('++'|'--')
     Tree *c1 = node->childs->item[0];                                           //   取得子節點              
     if (strEqual(c1->type, "return")) {                                         // 處理 return 指令                                
       Tree *id = node->childs->item[1];                                                                   

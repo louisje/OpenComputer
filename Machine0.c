@@ -33,12 +33,12 @@ void M0IrqHandler(void *cpu) {
 }
 
 
-void M0execute(char *objFile) {               // 虛擬機器主函數
+void M0execute(char *objFile) {               	// 虛擬機器主函數
   printf("===M0:run %s===\n", objFile);
-  Cpu0 *cpu0 = Cpu0New(objFile, M0MemorySize);// 建立 M0 物件
+  Cpu0 *cpu0 = Cpu0New(objFile, M0MemorySize);	// 建立 M0 物件
   cpu0->irqHandler = M0IrqHandler;
   cpu0->swiHandler = M0SwiHandler;
-  Cpu0Run(cpu0);                 // 開始執行
-  Cpu0Dump(cpu0);                             // 傾印暫存器
-  Cpu0Free(cpu0);                             // 釋放記憶體 
+  Cpu0Run(cpu0);                 				// 開始執行
+  Cpu0Dump(cpu0);                             	// 傾印暫存器
+  Cpu0Free(cpu0);                             	// 釋放記憶體 
 }
