@@ -1,9 +1,9 @@
-CC   = gcc.exe -D__DEBUG__
+CC   = gcc$(EXESUF) -D__DEBUG__
 OBJ  = Parser.o Tree.o Lib.o Scanner.o Array.o Compiler.o HashTable.o Generator.o Assembler.o Cpu0.o OpTable.o Machine0.o
 LINKOBJ = $(OBJ)
 LIBS = 
 INCS = 
-BIN  = test.exe c0c.exe as0.exe vm0.exe m0.exe
+BIN  = test$(EXESUF) c0c$(EXESUF) as0$(EXESUF) vm0$(EXESUF) m0$(EXESUF)
 CFLAGS = $(INCS) -g3
 RM = rm -f
 
