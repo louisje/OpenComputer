@@ -1,24 +1,30 @@
 #include "Parser.h"
 /*
 BASE_LIST = BASE*
-BASE = IF | FOR | WHILE | METHOD | BLOCK | STMT ;
-IF = if (EXP) BASE (else BASE)?
-FOR = for ( STMT ; EXP ; STMT) BASE
-WHILE = while (EXP) BASE
-METHOD = def Id(ID_LIST?) BLOCK
-STMT = return EXP | id '=' EXP | id ('++'|'--')
+BASE = IF | FOR | WHILE | BLOCK | METHOD | STMT ;
+IF = if (COND) BASE (else BASE)?
+FOR = for (STMT ; COND ; STMT) BASE
+WHILE = while (COND) BASE
+METHOD = def ID(DECL_LIST) BLOCK
+STMT = return EXP | DECL | ID (EXP_LIST) | ID = EXP | ID OP1
+DECL = TYPE VAR_LIST
 BLOCK = { BASE_LIST }
-EXP =  ( EXP Op2 EXP ) | ITEM (Op2 ITEM)?
-ITEM = Int | Float | String | Id Op1? | Id(EXP_LIST?)?
+VAR = ID (= EXP)?
+COND = EXP COND_OP EXP
+EXP = ITEM (OP2 EXP)? | ( EXP (OP2 EXP)? )
+ITEM = INT | FLOAT | STRING | ID | ID(EXP_LIST?)
 EXP_LIST = EXP (, EXP)*
-ID_LIST = id (, id)*
+VAR_LIST = VAR (, VAR)*
+DECL_LIST = DECL (, DECL)*
 
-Id = [A-Za-z_][0-9A-Za-z_]*
-Int = [0-9]+
-Float = [0-9]+.[0-9]+
-String = ".*"
-Op2 = [+-/*%&|^><=|'<<'|'>>']
-Op1 = ++ | --
+ID = [A-Za-z_][0-9A-Za-z_]*
+INT = [0-9]+
+FLOAT = [0-9]+.[0-9]+
+STRING = ".*"
+OP2 = [+-/*%&|^><=|'<<'|'>>']
+OP1 = ++ | --
+COND_OP = |<|>|<=|>=|==|!=
+TYPE = int | byte | float | ptr
 */
 
 Parser *parse(char *text) {        // ­åªR¾¹ªº¥D­n¨ç¼Æ
@@ -38,17 +44,17 @@ void parseIf(Parser *p);
 void parseWhile(Parser *p);
 void parseBase(Parser *p);
 void parseStmt(Parser *p);
-void parseAssign(Parser *p);
-void parseCall(Parser *p);
+void parseDecl(Parser *p);
+void parseCond(Parser *p);
 void parseExp(Parser *p);
 void parseMethod(Parser *p);
 void parseItem(Parser *p);
 void parseExpList(Parser *p);
-void error();
+void parseDeclList(Parser *p);
+void parseVarList(Parser *p);
 BOOL isEnd(Parser *p);
 BOOL isNext(Parser *p, char *pTypes);
 char *next(Parser *p, char *pTypes);
-// void prev(Parser *p);
 
 Parser *ParserNew() {
   Parser *parser = ObjNew(Parser, 1);
@@ -73,15 +79,9 @@ void ParserParse(Parser *p, char *text) {                 // ­åªRª«¥óªº¥D¨ç¼Æ
   printf("======= parsing ========\n");
   p->tree = parseBaseList(p);                                 // ¶}©l­åªR PROG = BaseList
   if (p->stack->count != 0) {                             // ¦pªG­åªR§¹¦¨«á°ïÅ|¬OªÅªº¡A¨º´N¬O­åªR¦¨¥\
-    printf("parse fail:stack.count=%d", p->stack->count); //   §_«h´N´£¥Ü¿ù»~°T®§
-    error();
+    debug("parse fail:stack.count=%d", p->stack->count); //   §_«h´N´£¥Ü¿ù»~°T®§
+	ERROR();
   }
-}
-
-void error() {
-  printf("error()!\n");
-  system("pause");
-  exit(1);
 }
 
 // BASE_LIST = BASE*
@@ -121,40 +121,40 @@ void parseBlock(Parser *p) {
   pop(p, "BLOCK");
 }
 
-// METHOD = def Id(ID_LIST?) BLOCK
+// METHOD = def ID(DECL_LIST) BLOCK
 void parseMethod(Parser *p) {
   push(p, "METHOD");
   next(p, "def");
   next(p, ID);
   next(p, "(");
   if (!isNext(p, ")"))
-    parseIdList(p);
+    parseDeclList(p);
   next(p, ")");
   parseBlock(p);
   pop(p, "METHOD");
 }
 
-// FOR = for ( STMT ; EXP ; STMT) BASE
-void parseFor(Parser *p) {                  // «Ø¥ß FOR ªº¾ð®Ú
-  push(p, "FOR");                           // ¨ú±o for
-  next(p, "for");                           // ¨ú±o (
-  next(p, "(");                             // ­åªR STMT
-  parseStmt(p);                           // ¨ú±o ;
-  next(p, ";");                             // ­åªR COND
-  parseExp(p);                              // ¨ú±o ;
-  next(p, ";");                             // ­åªR STMT
-  parseStmt(p);                             // ¨ú±o )
-  next(p, ")");                             // ­åªR BASE
-  parseBase(p);                             // ¨ú¥X FOR ªº­åªR¾ð
-  pop(p, "FOR");
+// FOR = for ( STMT ; COND ; STMT) BASE
+void parseFor(Parser *p) {                  
+  push(p, "FOR");                           // «Ø¥ß FOR ªº¾ð®Ú
+  next(p, "for");                           // ¨ú±o for
+  next(p, "(");                             // ¨ú±o (
+  parseStmt(p);                             // ­åªR STMT
+  next(p, ";");                             // ¨ú±o ;
+  parseCond(p);                              // ­åªR COND
+  next(p, ";");                             // ¨ú±o ;
+  parseStmt(p);                             // ­åªR STMT
+  next(p, ")");                             // ¨ú±o )
+  parseBase(p);                             // ­åªR BASE
+  pop(p, "FOR");                            // ¨ú¥X FOR ªº­åªR¾ð
 }
 
-// IF = if (EXP) BASE (else BASE)?
+// IF = if (COND) BASE (else BASE)?
 void parseIf(Parser *p) {                  // «Ø¥ß FOR ªº¾ð®Ú
   push(p, "IF");                           // ¨ú±o for
   next(p, "if");                           // ¨ú±o (
   next(p, "(");                             // ­åªR STMT
-  parseExp(p);                             // ¨ú±o ;
+  parseCond(p);                             // ¨ú±o ;
   next(p, ")");                             // ­åªR COND
   parseBase(p);                            // ¨ú¥X FOR ªº­åªR¾ð
   if (isNext(p, "else")) {
@@ -164,43 +164,63 @@ void parseIf(Parser *p) {                  // «Ø¥ß FOR ªº¾ð®Ú
   pop(p, "IF");
 }
 
-// WHILE = while (EXP) BASE
+// WHILE = while (COND) BASE
 void parseWhile(Parser *p) {                  // «Ø¥ß FOR ªº¾ð®Ú
   push(p, "WHILE");                           // ¨ú±o for
   next(p, "while");                           // ¨ú±o (
   next(p, "(");                             // ­åªR STMT
-  parseExp(p);                             // ¨ú±o ;
-  next(p, ")");                             // ­åªR BLOCK
+  parseCond(p);                             // ¨ú±o ;
+  next(p, ")");                             // ­åªR BASE
   parseBase(p);                            // ¨ú¥X FOR ªº­åªR¾ð
   pop(p, "WHILE");
 }
 
-// STMT = return EXP | id '=' EXP | id ('++'|'--')
+// STMT = return EXP | DECL | ID (EXP_LIST) | ID = EXP | ID OP1
+// ª`·N¡G DECL_LIST ªº²Ä¤@­Ó¬° TYPE
 void parseStmt(Parser *p) {
   push(p, "STMT");
   if (isNext(p, "return")) {
     next(p, "return");
     parseExp(p);
-  } else {
-    next(p, "id");
-	if (isNext(p, "=")) {
-      next(p, "=");
-      parseExp(p);
-	} else
+  } else if (isNext(p, TYPE))
+    parseDecl(p);
+  else if (isNext(p, ID)) {
+    next(p, ID);
+	if (isNext(p, "(")) {
+      next(p, "(");
+      parseExpList(p);
+	  next(p, ")");
+	} else if (isNext(p, "=")) {
+	  next(p, "=");
+	  parseExp(p);
+	} else if (isNext(p, OP1)) {
 	  next(p, OP1);
+	} else
+	  ERROR();
   }
   pop(p, "STMT");
 }
 
-// ASSIGN = id = EXP
-void parseAssign(Parser *p) {
-  push(p, "ASSIGN");
-  next(p, ID);
-  next(p, "=");
-  parseExp(p);
-  pop(p, "ASSIGN");
+// DECL = TYPE VAR_LIST
+void parseDecl(Parser *p) {
+  push(p, "DECL");
+  next(p, TYPE);
+  parseVarList(p);
+  pop(p, "DECL");  
 }
 
+// VAR = ID (= EXP)?
+void parseVar(Parser *p) {
+  push(p, "VAR");
+  next(p, ID);
+  if (isNext(p, "=")) {
+    next(p, "=");
+    parseExp(p);
+  }
+  pop(p, "VAR");  
+}
+
+/*
 // CALL = Id(EXP_LIST?)?
 void parseCall(Parser *p) {
   push(p, "CALL");
@@ -213,27 +233,39 @@ void parseCall(Parser *p) {
   }
   pop(p, "CALL");  
 }
+*/
 
-// EXP =  ( EXP Op EXP ) | ITEM (Op ITEM)?
+// COND = EXP COND_OP EXP
+void parseCond(Parser *p) {
+  push(p, "COND");
+  parseExp(p);
+  next(p, COND_OP);
+  parseExp(p);
+  pop(p, "COND");
+}
+
+// EXP = ITEM (OP2 EXP)? | ( EXP (OP2 EXP)? )
 void parseExp(Parser *p) {
   push(p, "EXP");
   if (isNext(p, "(")) {
     next(p, "(");
     parseExp(p);
-    next(p, OP2);
-    parseExp(p);
+	if (!isNext(p, ")")) {
+	  next(p, OP2);
+      parseExp(p);
+	}
     next(p, ")");
   } else {
     parseItem(p);
     if (isNext(p, OP2)) {
       next(p, OP2);
-      parseItem(p);
+      parseExp(p);
     }
   }
   pop(p, "EXP");
 }
 
-// ITEM = Int | Float | String | Id OP1? | Id(EXP_LIST?)?
+// ITEM = INT | FLOAT | STRING | ID | ID(EXP_LIST?)
 void parseItem(Parser *p) {
   push(p, "ITEM");
   if (isNext(p, INTEGER))
@@ -244,9 +276,7 @@ void parseItem(Parser *p) {
     next(p, STRING);
   else if (isNext(p, ID)) {
     next(p, ID);
-	if (isNext(p, OP1))
-	  next(p, OP1);
-	else if (isNext(p, "(")) {
+	if (isNext(p, "(")) {
       next(p, "(");
 	  if (!isNext(p, ")"))
 	    parseExpList(p);
@@ -267,15 +297,26 @@ void parseExpList(Parser *p) {
   pop(p, "EXP_LIST");  
 }
 
-// ID_LIST = id (, id)*
-void parseIdList(Parser *p) {
-  push(p, "ID_LIST");
-  next(p, ID);
+// VAR_LIST = VAR (, VAR)*
+void parseVarList(Parser *p) {
+  push(p, "VAR_LIST");
+  parseVar(p);
   while (isNext(p, ",")) {
     next(p, ",");
-    next(p, ID);
+    parseVar(p);
   }
-  pop(p, "ID_LIST");  
+  pop(p, "VAR_LIST");  
+}
+
+// DECL_LIST = DECL (, DECL)*
+void parseDeclList(Parser *p) {
+  push(p, "DECL_LIST");
+  parseDecl(p);
+  while (isNext(p, ",")) {
+    next(p, ",");
+    parseDecl(p);
+  }
+  pop(p, "DECL_LIST");  
 }
 
 char* level(Parser *p) {
@@ -301,15 +342,7 @@ BOOL isNext(Parser *p, char *pTypes) {
   else
     return FALSE;
 }
-/*
-void prev(Parser *p) {
-    Tree *parentTree = ArrayPeek(p->stack);                   //   ¨ú±o¤÷¸`ÂI¡A
-    Tree *last = ArrayPop(parentTree->childs);
-    TreeFree(last);
-    printf("%s prev()\n", level(p));
-    p->tokenIdx--;
-}
-*/
+
 char *next(Parser *p, char *pTypes) {                         // ÀË¬d¤U¤@­Óµü·Jªº«¬ºA
   char *token = nextToken(p);                                 // ¨ú±o¤U¤@­Óµü·J
   if (isNext(p, pTypes)) {                                    // ¦pªG¬OpTypes«¬ºA¤§¤@
@@ -322,8 +355,8 @@ char *next(Parser *p, char *pTypes) {                         // ÀË¬d¤U¤@­Óµü·Jª
     p->tokenIdx++;                                            //   «e¶i¨ì¤U¤@­Ó¸`ÂI
     return token;                                             //   ¶Ç¦^¸Óµü·J
   } else {                                                    // §_«h(¤U¤@­Ó¸`ÂI«¬ºA¿ù»~)
-    printf("next():%s is not type(%s)\n", token, pTypes);     //   ¦L¥X¿ù»~°T®§
-    error();
+    debug("next():%s is not type(%s)\n", token, pTypes);     //   ¦L¥X¿ù»~°T®§
+	ERROR();
     p->tokenIdx++;                                            //  «e¶i¨ì¤U¤@­Ó¸`ÂI
     return NULL;
   }
@@ -340,8 +373,8 @@ Tree* pop(Parser *p, char* pType) {                           // ¨ú¥X pType«¬ºAª
   Tree *tree = ArrayPop(p->stack);                            // ¨ú±o°ïÅ|³Ì¤W¼hªº¤l¾ð
   printf("%s-%s\n", level(p), tree->type);                    // ¦L¥X¥H«KÆ[¹î
   if (strcmp(tree->type, pType)!=0) {                         // ¦pªG«¬ºA¤£²Å¦X
-    printf("pop(%s):should be %s\n",tree->type,pType);        //  ¦L¥X¿ù»~°T®§
-	error();
+    debug("pop(%s):should be %s\n",tree->type,pType);        //  ¦L¥X¿ù»~°T®§
+	ERROR();
   }
   if (p->stack->count > 0) {                                  // ¦pªG°ïÅ|¤£¬OªÅªº
     Tree *parentTree = ArrayPeek(p->stack);                   //  ¨ú¥X¤W¤@¼h­åªR¾ð
@@ -349,5 +382,3 @@ Tree* pop(Parser *p, char* pType) {                           // ¨ú¥X pType«¬ºAª
   }
   return tree;
 }
-
-

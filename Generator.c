@@ -34,14 +34,16 @@ Tree* GenCode(Generator *g, Tree *node, char *rzVar) {                          
   strcpy(rzVar, "");                                                                                               
   if (node == NULL) return NULL;                                                // 遞迴終止條件。                     
                                                                                                                    
-  if (strEqual(node->type, "FOR")) {                                            // 處理 FOR 節點                      
-    // FOR = for ( STMT ; EXP ; STMT) BASE
-	// FOR ::= 'for' '(' STMT ';' COND ';' STMT ')' BLOCK                                                
+  if (strEqual(node->type, "METHOD")) {                                         // 處理 METHOD
+    // METHOD = def ID(DECL_LIST) BLOCK
+	ERROR();
+  } else if (strEqual(node->type, "FOR")) {                                     // 處理 FOR 節點
+    // FOR = for ( STMT ; COND ; STMT) BASE
     char forBeginLabel[100], forEndLabel[100], condOp[100];                     
     Tree *stmt1 = node->childs->item[2],                                        // 取得子節點                         
          *cond  = node->childs->item[4],                                                                           
          *stmt2 = node->childs->item[6],                                                                           
-         *block = node->childs->item[8];                                                                           
+         *base  = node->childs->item[8];
     GenCode(g, stmt1, nullVar);                                                 // 遞迴產生 STMT                             
     int tempForCount = g->forCount++;                                           // 設定FOR迴圈的                 
     sprintf(forBeginLabel, "FOR%d", tempForCount);                              //   進入標記                                
@@ -51,21 +53,58 @@ Tree* GenCode(Generator *g, Tree *node, char *rzVar) {                          
     char negOp[100];                                                                                  
     negateOp(condOp, negOp);                                                    // 互補運算negOp         
     GenPcode(g, "", "J", negOp, "", forEndLabel);                               // 中間碼：例如J > _FOR1 
-    GenCode(g, block, nullVar);                                                 // 遞迴產生 BLOCK       
+    GenCode(g, base, nullVar);                                                 // 遞迴產生 BLOCK
     GenCode(g, stmt2, nullVar);                                                 // 遞迴產生 STMT        
     GenPcode(g, "", "J", "", "", forBeginLabel);                                // 中間碼：例如J FOR1    
     GenPcode(g, forEndLabel, "", "", "", "");                                   // 中間碼：例如 _FOR1    
     return NULL;                                                                                      
+  } else if (strEqual(node->type, "IF")) {                                     // 處理 FOR 節點
+    // if (COND) BASE (else BASE)?
+    char elseLabel[100], condOp[100];
+    Tree *cond  = node->childs->item[2],                                        // 取得子節點
+         *base1 = node->childs->item[4],
+         *base2 = node->childs->item[7];
+    int tempIfCount = g->ifCount++;                                           // 設定FOR迴圈的
+    sprintf(elseLabel, "ELSE%d", tempIfCount);                              //   進入標記
+    GenCode(g, cond, condOp);                                                   // 遞迴產生 COND
+    char negOp[100];
+    negateOp(condOp, negOp);                                                    // 互補運算negOp
+    GenPcode(g, "", "J", negOp, "", elseLabel);                                 // 中間碼：例如J > ELSE1
+    GenCode(g, base1, nullVar);                                                 // 遞迴產生 BASE1
+    GenPcode(g, elseLabel, "", "", "", "");                                     // 產生 ELSE 標記，例如 ELSE1:
+    GenCode(g, base2, nullVar);                                                 // 遞迴產生 STMT
+    return NULL;
+  } else if (strEqual(node->type, "WHILE")) {                                     // 處理 FOR 節點
+    // while (COND) BASE
+    char wendLabel[100], condOp[100];
+    Tree *cond  = node->childs->item[2],                                        // 取得子節點
+         *base  = node->childs->item[4];
+    int tempWhileCount = g->whileCount++;                                       // 設定 WHILE 迴圈的
+    sprintf(wendLabel, "_WHILE%d", tempWhileCount);                         //   離開標記
+    GenCode(g, cond, condOp);                                                   // 遞迴產生 COND
+    char negOp[100];
+    negateOp(condOp, negOp);                                                    // 互補運算negOp
+    GenPcode(g, "", "J", negOp, "", wendLabel);                                 // 中間碼：例如J > _WHILE1
+    GenCode(g, base, nullVar);                                                  // 遞迴產生 BASE
+    GenPcode(g, wendLabel, "", "", "", "");                                     // 產生 _WHILE 標記，例如 _WHILE1:
+    return NULL;
   } else if (strEqual(node->type, "STMT")) {                                    // 處理 STMT 節點          
-    // STMT = return id | id '=' EXP | id ('++'|'--')
+    // STMT = return EXP | DECL | ID (EXP_LIST) | ID = EXP | ID OP1
     Tree *c1 = node->childs->item[0];                                           //   取得子節點              
-    if (strEqual(c1->type, "return")) {                                         // 處理 return 指令                                
-      Tree *id = node->childs->item[1];                                                                   
-      GenPcode(g, "", "RET", "", "", id->value);                                // 中間碼： 例如 RET sum      
-    } else {                                                                                              
+    if (strEqual(c1->type, "return")) { // return EXP                           // 處理 return 指令
+      Tree *exp = node->childs->item[1];
+	  GenCode(g, exp, rzVar);
+      GenPcode(g, "", "RET", "", "", rzVar);                                    // 中間碼： 例如 RET sum
+    } else if (strPartOf(c1->type, TYPE)) { // DECL = TYPE ID_LIST				// 產生 DECL 的程式碼
+	  ERROR();
+	} else if (strEqual(c1->type, ID)) { // ID : 可能是 ID (EXP_LIST) | ID = EXP | ID OP1
       Tree *id = node->childs->item[0];                                         //   取得子節點              
+	  if (node->childs->count <=1)
+	    ERROR();
       Tree *op = node->childs->item[1];                                                                   
-      if (strEqual(op->type, "=")) {                                            // 處理 id= EXP             
+      if (strEqual(op->type, "(")) {                                            // 處理 id(EXP_LIST)
+	    ERROR();
+	  } if (strEqual(op->type, "=")) {                                          // 處理 id= EXP
         // STMT 是 id '=' EXP                                                   //  取得子節點               
         Tree *exp = node->childs->item[2];                                                                
         char expVar[100];                                                          
@@ -73,39 +112,59 @@ Tree* GenCode(Generator *g, Tree *node, char *rzVar) {                          
         GenPcode(g, "", "=", expVar, "", id->value);                            //  中間碼：例如 = 0 sum     
         HashTablePut(g->symTable, id->value, id->value);                        //  將 id 加入到符號表中                              
         strcpy(rzVar, expVar);                                                  //  傳回 EXP 的變數，例如 T0  
-      } else { // STMT 是 id++ 或 id--，--> id OP1                              // 處理 id++ 或 id--         
-        char addsub[100];                                                                                 
-        if (strEqual(op->value, "++"))                                          //  如果是 id++              
-          strcpy(addsub, "+");                                                  //   設定運算為 + 法         
-        else                                                                    //  否則                     
-          strcpy(addsub, "-");                                                  //   設定運算為 - 法         
-        GenPcode(g, "", addsub, id->value, "1", id->value);                     //  中間碼：例如 ADD i, 1, i 
+      } else if (strPartOf(op->type, OP1)) { // STMT 是 ID OP1                             					// 處理 id++ 或 id--
+        char addsub[2] = " ";
+		addsub[0] = op->type[0];
+        GenPcode(g, "", addsub, id->value, "1", id->value);                     //  中間碼：例如 + i, 1, i
         strcpy(rzVar, id->value);                                               //  傳回id，例如 i           
-      }                                                                         
+      } else
+		ERROR();
     }                                                                           
   } else if (strEqual(node->type, "COND")) {                                    // 處理 COND 節點      
-    // 處理判斷式 COND = EXP ('=='|'!='|'<='|'>='|'<'|'>') EXP                                
+    // COND = EXP COND_OP EXP
     Tree* op = node->childs->item[1];                                           // 取得子節點            
     char expVar1[100], expVar2[100];                                                                  
     GenCode(g, node->childs->item[0], expVar1);                                 //  遞迴產生 EXP       
     GenCode(g, node->childs->item[2], expVar2);                                 //  遞迴產生 EXP       
     GenPcode(g, "", "CMP", expVar1, expVar2, nullVar);                          //  中間碼：例如 CMP i,10 
-    strcpy(rzVar, op->value); // 傳回布林運算子                                 //  傳回op，例如 >       
-  } else if (strPartOf(node->type, "|EXP|")) {                                  // 處理 EXP
-    // 處理運算式 EXP = ITEM ([+-*/] ITEM)*                                               
-    Tree *item1 = node->childs->item[0];                                        // 取得子節點            
-    char var1[100], var2[100], tempVar[100];                                                          
-    GenCode(g, item1, var1);                                                    // 遞迴產生 ITEM
-    if (node->childs->count > 1) {
-      Tree* op = node->childs->item[1];                                        // 連續取得 (op ITEM)? 
-      Tree* item2 = node->childs->item[2];                                                         
-      GenCode(g, item2, var2);                                                  // 遞迴產生 ITEM        
-      GenTempVar(g, tempVar);                                                   // 取得臨時變數，例如T0  
-      GenPcode(g, "", op->value, var1, var2, tempVar);                          // 中間碼：例如 + sum i T0
-      strcpy(var1, tempVar);                                                    // 傳回臨時變數，例如 T0  
+    strcpy(rzVar, op->value); // 傳回布林運算子                                 //  傳回op，例如 > */
+  } else if (strEqual(node->type, "EXP")) {                                  // 處理 EXP
+    // EXP = ITEM (OP2 EXP)? | ( EXP (OP2 EXP)? )
+    char var1[100], var2[100];
+    Tree *c1 = node->childs->item[0];                                           //   取得子節點
+	if (strEqual(c1->type, "(")) {
+	  Tree *exp1 = node->childs->item[1];
+	  GenCode(g, exp1, var1);
+	  if (node->childs->count == 3) // ( EXP )
+	    strcpy(rzVar, var1);
+	  else { // (EXP (OP2 EXP)?)
+	    Tree *op = node->childs->item[2];
+  	    Tree *exp2 = node->childs->item[3];
+	    GenCode(g, exp2, var2);
+	    GenTempVar(g, rzVar);
+	    GenPcode(g, "", op->value, var1, var2, rzVar);
+	  }
+	} else { // ITEM (OP2 EXP)?
+	  Tree *item1 = node->childs->item[0];
+	  if (node->childs->count == 1) { // 只有一個 ITEM
+	    GenCode(g, item1, rzVar);
+	  } else { // ITEM (OP2 EXP)
+	    Tree *op = node->childs->item[1];
+	    Tree *exp2 = node->childs->item[2];
+	    GenCode(g, item1, var1);
+	    GenCode(g, exp2, var2);
+	    GenTempVar(g, rzVar);
+	    GenPcode(g, "", op->value, var1, var2, rzVar);
     }                                                                                                 
-    strcpy(rzVar, var1);                                                        // 傳回臨時變數，例如 T0  
-  } else if (strPartOf(node->type, "|number|id|")) {                            // 處理 number, id 節點
+	}
+  } else if (strEqual(node->type, "ITEM")) { // 處理 ITEM
+    // ITEM = INT | FLOAT | STRING | ID | ID(EXP_LIST?)
+    Tree *c1 = node->childs->item[0];
+	if (node->childs->count == 1) // INT | FLOAT | STRING | ID
+	  GenCode(g, c1, rzVar);
+	else
+  	  ERROR();
+  } else if (strPartOf(node->type, "|integer|float|id|")) {                            // 處理 number, id 節點
     // 遇到變數或常數，傳回其 value 名稱。                                                         
     strcpy(rzVar, node->value);                                                 // 直接傳回 id 或 number
   } else if (node->childs != NULL) {                                            // 其他情況           
@@ -150,15 +209,22 @@ void GenPcodeToAsm(Generator *g, char* label, char* op, char* p1, char* p2, char
   if (strEqual(op, "=")) { // pTo = p1                                                     // 處理等號 (= 0 sum)                
     GenAsmCode(g, "", "LD", "R1", p1, "");                                                 // 轉成 LDI R1, 0                   
     GenAsmCode(g, "", "ST", "R1", pTo, "");                                                //      ST R1, sum                  
-  } else if (strPartOf(op, "|+|-|*|/|")) { // pTo = p1 op p2                               // 處理運算(+ sum i sum)            
-    char asmOp[100];                                                                                                        
-    if (strEqual(op, "+")) strcpy(asmOp, "ADD");                                           // 根據 op 設定運算指令             
-    else if (strEqual(op, "-")) strcpy(asmOp, "SUB");                                                                       
-    else if (strEqual(op, "*")) strcpy(asmOp, "MUL");                                                                       
-    else if (strEqual(op, "/")) strcpy(asmOp, "DIV");                                                                       
+  } else if (strPartOf(op, OP2)) { // pTo = p1 op p2                                       // 處理運算(+ sum i sum)
     GenAsmCode(g, "", "LD", "R1", p1, "");                                                 // 轉成 LD R1, sum                  
     GenAsmCode(g, "", "LD", "R2", p2, "");                                                 //      LD R2, i                    
-    GenAsmCode(g, "", asmOp,"R3", "R1", "R2");                                             //      ADD R3, R1, R2              
+    if (strEqual(op, "+")) GenAsmCode(g, "", "ADD","R3", "R1", "R2");                      // 根據 op 設定運算指令
+    else if (strEqual(op, "-")) GenAsmCode(g, "", "SUB","R3", "R1", "R2");
+    else if (strEqual(op, "*")) GenAsmCode(g, "", "MUL","R3", "R1", "R2");
+    else if (strEqual(op, "/")) GenAsmCode(g, "", "DIV","R3", "R1", "R2");
+    else if (strEqual(op, "&")) GenAsmCode(g, "", "AND","R3", "R1", "R2");
+    else if (strEqual(op, "|")) GenAsmCode(g, "", "OR", "R3", "R1", "R2");
+    else if (strEqual(op, "^")) GenAsmCode(g, "", "XOR","R3", "R1", "R2");
+    else if (strEqual(op, "/")) GenAsmCode(g, "", "DIV","R3", "R1", "R2");
+	else if (strEqual(op, "%")) {														   // 處理運算 % a b t 時 t = a-(a/b)*b
+	  GenAsmCode(g, "", "DIV", "R3", "R1", "R2");										   // R3 = a/b
+	  GenAsmCode(g, "", "MUL", "R4", "R3", "R2");										   // R4 = R3*b = (a/b)*b
+	  GenAsmCode(g, "", "SUB", "R3", "R1", "R4");										   // R3 = R1-R4 = a-(a-b)*b
+	}
     GenAsmCode(g, "", "ST", "R3", pTo, "");                                                //      ST R3, sum                  
   } else if (strEqual(op, "CMP")) { // CMP p1, p2                                          // 處理 CMP (cmp i 10)              
     GenAsmCode(g, "", "LD", "R1", p1, "");                                                 // 轉成 LD R1, i                    

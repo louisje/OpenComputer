@@ -3,6 +3,7 @@
 
 #include "Scanner.h"
 #include "Tree.h"
+#include "Lib.h"
 
 typedef struct {                           // 剖析器的物件結構      
   Array *tokens;                           //   詞彙串列         
