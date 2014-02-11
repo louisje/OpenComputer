@@ -1,5 +1,6 @@
 // 本軟體採用公共領域授權 (Public Domain License)，您可以任意使用本軟體及其原始碼。 
 // 但作者對於任何因本軟體所產生的損害（包含他人修改後所造成的損害），不負任何責任。
+// 作者：陳鍾誠
 
 #include <stdlib.h>
 #include <string.h>
@@ -13,17 +14,17 @@ void ArrayTest() {
   Array *array = ArrayNew(1);
   int i;
 	for (i=0; i<4; i++) // 將所有名字加入到陣列中。 
-		ArrayAdd(array, strNew(names[i]));
+		ArrayAdd(array, names[i]);
 
 	ArrayEach(array, strPrintln); // 印出整個陣列 
-	printf("ArrayPop()=%s\n", ArrayPop(array, strFree)); // 當堆疊用，彈出最後一個 
+	printf("ArrayPop()=%s\n", ArrayPop(array)); // 當堆疊用，彈出最後一個 
 	printf("ArrayPeek()=%s\n", ArrayPeek(array)); // 當堆疊用，取得最後一個
 	for (i=0; i<4; i++) { // 看看四個名字是否都還在陣列中 
 		int arrayIdx = ArrayFind(array, names[i], (FuncPtr2) strcmp);
     printf("ArrayFind(%s)=%d\n", names[i], arrayIdx);
   }
 	ArrayEach(array, strPrintln); // 印出整個陣列 
-	ArrayFree(array, strFree); // 釋放整個陣列
+	ArrayFree(array, NULL); // 釋放整個陣列
   
 	Array *tokens = split("abc,def*ghi", ",*", REMOVE_SPLITER); // 將字串分割為陣列 
 	ArrayEach(tokens, strPrintln); // 印出分割結果 
@@ -89,11 +90,10 @@ void ArrayPush(Array *array, void *item) {
 
 // 功能：(模擬堆疊) 彈出一個元素
 // 範例：char *token = ArrayPop(array);
-void* ArrayPop(Array *array, FuncPtr1 objFree) {
+void* ArrayPop(Array *array) {
   ASSERT(array->count>0);
 	void *top = ArrayLast(array);
 	array->count--;
-	if (objFree != NULL) objFree(top);
 	return top;
 }
 

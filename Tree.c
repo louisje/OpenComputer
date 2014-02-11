@@ -25,10 +25,10 @@ void NodeFree(Tree *node) {
     ObjFree(node->sem);
 }
 */
+
 void TreeFree(Tree *tree) {
   if (tree == NULL) return;
-	if (tree->sem != NULL)
-        ObjFree(tree->sem);
+        
   if (tree->childs != NULL) {
     int i;
 		for (i=0; i<tree->childs->count; i++) {

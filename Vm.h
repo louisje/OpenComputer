@@ -4,17 +4,19 @@
 #include "Lib.h"
 #include "OpTable.h"
 
-typedef struct {
+typedef struct Vm {
 	BYTE *m;
 	int mSize;
 	int r[16], ir;
 	BYTE op, ra, rb, rc, cc;
 	int  c5, c12, c16, c24, caddr, raddr;
 	BYTE n, z, i, t, mode;
-	FuncPtr1 irqHandler, swiHandler;
+	void (*irqHandler)(struct Vm *vm);
+	void (*swiHandler)(struct Vm *vm);
 	BYTE isTrace;
-	int count;
-} Cpu;
+	int count, irqTimes;
+	OpTable *opTable;
+} Vm;
 
 #define bits(i, from, to) ((UINT32) i << (31-to) >> (31-to+from)) // 取得 from 到 to 之間的位元                   
 #define ROR(i, k) (((UINT32)i>>k)|(bits(i,32-k, 31)<<(32-k)))// 向右旋轉k位元                                           
@@ -29,35 +31,47 @@ typedef struct {
 #define StoreByte(b, m, addr) { m[addr] = (BYTE) b; }        // m[addr]=b                                                 
 #define LoadByte(b, m, addr) { b = m[addr]; }                // b=m[addr]                    
 
-#define IR (cpu->ir)
-#define PC (cpu->r[15])
-#define LR (cpu->r[14])
-#define SP (cpu->r[13])
-#define SW (cpu->r[12])
-#define M  (cpu->m)
-#define RA (cpu->ra)
-#define RB (cpu->rb)
-#define RC (cpu->rc)
-#define OP (cpu->op)
-#define C5 (cpu->c5)
-#define C12 (cpu->c12)
-#define C16 (cpu->c16)
-#define C24 (cpu->c24)
-#define N (cpu->n)
-#define Z (cpu->z)
-#define C (cpu->c)
-#define V (cpu->v)
-#define I (cpu->i)
-#define T (cpu->t)
-#define MODE (cpu->mode)
-#define CADDR (cpu->caddr)
-#define RADDR (cpu->raddr)
-#define R (cpu->r)
+#define IR (vm->ir)
+#define PC (vm->r[15])
+#define LR (vm->r[14])
+#define SP (vm->r[13])
+#define SW (vm->r[12])
+#define M  (vm->m)
+#define RA (vm->ra)
+#define RB (vm->rb)
+#define RC (vm->rc)
+#define OP (vm->op)
+#define C5 (vm->c5)
+#define C12 (vm->c12)
+#define C16 (vm->c16)
+#define C24 (vm->c24)
+#define N (vm->n)
+#define Z (vm->z)
+#define C (vm->c)
+#define V (vm->v)
+#define I (vm->i)
+#define T (vm->t)
+#define MODE (vm->mode)
+#define CADDR (vm->caddr)
+#define RADDR (vm->raddr)
+#define R (vm->r)
 
-void execute(char *objFile, int memSize); // 虛擬機器的主要函數 
-Cpu* CpuNew(char *objFile, int memSize);
-void CpuFree(Cpu *cpu);
-void CpuRun(Cpu *cpu);
-void CpuDump(Cpu *cpu);
+// ============ 位址設定  ===============
+#define M0MemorySize 65536
+#define Timer        ((int*) &(cpu0->m[65500]))
+#define ResetAddress 0*4
+#define UnexpAddress 1*4
+#define SwiAddress   2*4
+#define IrqAddress   3*4
+
+
+void VmTest();
+void execute(char *objFile, int irqTimes); // 虛擬機器的主要函數 
+Vm* VmNew(char *objFile);
+void VmFree(Vm *vm);
+void VmIrqHandler(Vm *vm);
+void VmSwiHandler(Vm *vm);
+void VmRun(Vm *vm);
+void VmDump(Vm *vm);
 
 #endif

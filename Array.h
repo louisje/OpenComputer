@@ -26,7 +26,7 @@ void ArrayAdd(Array *array, void *item); // 新增一個元素
 void* ArrayGet(Array *array, int i); // 取得陣列的第 i 個元素 
 void* ArrayLast(Array *array); // 取得最後一個元素 
 void ArrayPush(Array *array,void *item); // (模擬堆疊) 推入一個元素 
-void* ArrayPop(Array *array, FuncPtr1 objFree);  //(模擬堆疊) 彈出一個元素  
+void* ArrayPop(Array *array);  //(模擬堆疊) 彈出一個元素  
 void* ArrayPeek(Array *array); //(模擬堆疊) 取得最上面的元素 
 int ArrayFind(Array *array, void *data, FuncPtr2 fcmp); // 尋找陣列中的特定元素的位置
 void ArrayEach(Array *array, FuncPtr1 f); //對每個元素都執行 f 函數

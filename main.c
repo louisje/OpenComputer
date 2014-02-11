@@ -1,7 +1,6 @@
 #include "Assembler.h"                                          // ¤Þ¥Î²ÕÄ¶¾¹ÀÉÀY                
 #include "Compiler.h"                                           // ¤Þ¥Î½sÄ¶¾¹ÀÉÀY                
 
-#define UNITTEST    0
 #define TEST        1
 #define CC          2
 #define CI          3
@@ -16,18 +15,21 @@ void argError(char *msg) {                                      // ³B²z°Ñ¼Æ¿ù»~ª
                                                                                               
 int main(int argc, char *argv[]) {                              // ¥Dµ{¦¡¶}©l                    
 	char cFile1[]="test.c1", *cFile=cFile1;                       //  ¹w³]µ{¦¡ÀÉ¬° test.c1
-	char asmFile1[]="test.asm1", *asmFile=asmFile1;               //  ¹w³]²Õ¦X»y¨¥¬°test.asm1
+	char asmFile1[]="test.asm1", *asmFile=asmFile1;               //  ¹w³]²Õ¦X»y¨¥¬° test.asm1
 	char objFile1[]="test.obj1", *objFile=objFile1;               //  ¹w³]¥ØªºÀÉ¬° test.obj1
 	char osAsmFile1[]="os0.asm1", *osAsmFile=osAsmFile1;
 	char osObjFile1[]="os0.obj1", *osObjFile=osObjFile1;
 #if TARGET==TEST  
-    LibTest();
-	ArrayTest();                                                  //   ´ú¸Õ°}¦Cª«¥ó
-	HashTableTest();                                              //   ´ú¸ÕÂø´êªíª«¥ó
-	OpTableTest();                                                //   ´ú¸Õ«ü¥Oªíª«¥ó
-	ScannerTest("test.c1");
-	SymTableTest();
+//  LibTest();
+//	ArrayTest();                                                  //   ´ú¸Õ°}¦Cª«¥ó
+//	HashTableTest();                                              //   ´ú¸ÕÂø´êªíª«¥ó
+//	OpTableTest();                                                //   ´ú¸Õ«ü¥Oªíª«¥ó
+//  AsmTest();
+//	VmTest();
+//	ScannerTest("test.c1");
+//	SymTableTest();
 	ParserTest("test.c1");
+//    OsTest();
 #elif TARGET==CI
 //	printf("interpret:cFile=%s\n", cFile);
 //	interpret(cFile);
@@ -44,16 +46,19 @@ int main(int argc, char *argv[]) {                              // ¥Dµ{¦¡¶}©l
 		argError("as1 <asmFile> <objFile>");                        //    ´£¥Üµ{¦¡°õ¦æ¤èªk          
   assemble(asmFile, objFile);                                   //  ¶}©l²ÕÄ¶                    
 #elif TARGET==VM                                               // ¦pªG½sÄ¶¥Ø¼Ð¬° VM0            
+    int irqTimes = 0;
+	if (argc >= 2) {                                               //  ¦pªG¦³ 2 ­Ó°Ñ¼Æ
+		objFile=argv[1];                                            //    ³]©w°Ñ¼Æ
+		if (argc >=3) irqTimes=atoi(argv[2]);                     //    ³]©w¨C´X­Ó«ü¥O¤¤Â_¤@¦¸ 
+	} else                                                          //  §_«h                        
+		argError("vm1 <objFile> <irqTimes>");                                  //    ´£¥Üµ{¦¡°õ¦æ¤èªk
+	execute(objFile, irqTimes);                                //  ¶}©l°õ¦æ (µêÀÀ¾÷)           
+#elif TARGET==OS                                               // ¦pªG½sÄ¶¥Ø¼Ð¬° OS
   if (argc == 2)                                                //  ¦pªG¦³ 2 ­Ó°Ñ¼Æ             
     objFile=argv[1];                                            //    ³]©w°Ñ¼Æ                  
   else                                                          //  §_«h                        
-		argError("vm1 <objFile>");                                  //    ´£¥Üµ{¦¡°õ¦æ¤èªk          
-  execute(objFile, 0);                                          //  ¶}©l°õ¦æ (µêÀÀ¾÷)           
-#elif TARGET==OS                                               // ¦pªG½sÄ¶¥Ø¼Ð¬° OS
-	if (argc == 2)
-		osObjFile = argv[1];
-	assemble(osAsmFile, osObjFile);
-	OSexecute(objFile);
+		argError("os1 <objFile>");                                  //    ´£¥Üµ{¦¡°õ¦æ¤èªk          
+	execute(objFile, 10);                                          //  ¶}©l°õ¦æ (µêÀÀ¾÷)           
 #elif TARGET==CI                                               // ¦pªG½sÄ¶¥Ø¼Ð¬° M0
   if (argc == 2)
 		interpret(cFile);

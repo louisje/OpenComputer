@@ -1,5 +1,92 @@
-#include "Semantic.h"
+#include "Parser.h"
 
+Symbol* SaSymbolLookup(Parser *p, char *name) {
+    int i;
+    Symbol *sym = NULL;
+    for (i=p->blockStack->count-1; i>=0; i--) {
+        Tree *block = p->blockStack->item[i];
+        sym=SymTableGet(p->symTable, block, name);
+        if (sym != NULL)
+            return sym;
+    }
+    return NULL;
+}
+
+/*
+// EXP = TERM (OP2 TERM)?
+void SaExp(Parser *p, Tree *node) {
+     SemExp *semExp = node->sem;
+     SemTerm *semTerm1 = semExp->term1->sem;
+     semExp->ptype = semTerm1->ptype;
+}
+// TERM = ( EXP (OP2 EXP)? ) | CINT | CFLOAT | CSTR | PATH
+void SaTerm(Parser *p, Tree *node) {
+     SemTerm *sem = node->sem;
+     PType *ptype = PTypeNew();
+     
+     if (sem->subTag == EXP) {
+        SemExp *semExp = sem->exp1->sem;
+        ObjCopy(ptype, semExp->ptype, PType);
+     } else if (sem->subTag == PATH) {
+        SemExp *semPath = sem->path->sem;
+        ObjCopy(ptype, semPath->ptype, PType);
+     }
+     else if (sem->subTag == CINT) {
+        ptype->typeSym = Int;
+     } else if (sem->subTag == CFLOAT) {
+        ptype->typeSym = Float;
+     } else if (sem->subTag == CSTR) {
+        ptype->typeSym = Char;
+        ptype->starCount = 1;
+     }
+     sem->ptype = ptype;
+}
+// PATH = ATOM ((.|->) ATOM)*
+void SaPath(Parser *p, Tree *node) {
+    Tree *lastAtom = child(node, node->childs->count-1);
+    SemAtom *lastSem = lastAtom->sem;
+    PType *ptype = PTypeNew();
+    ObjCopy(ptype, lastSem->ptype, PType);
+}
+
+// ATOM = ID (([ EXP ])* |( EXP_LIST? ))
+void SaAtom(Parser *p, Tree *atomLast, Tree *op, Tree *atom) {
+     Symbol *sym = NULL;
+     PType *ptype = NULL;
+     SemAtom *sem = atom->sem;
+     char *id = token(sem->id);
+     if (atomLast == NULL) {
+        sym = SaSymbolLookup(p, id);
+     } else {
+        SemAtom *semLast = atomLast->sem;
+        ASSERT(semLast->ptype.typeSym->symType == SymStruct);
+        sym = SymTableGet(p->symTable, semLast->ptype.typeSym, id);
+     }
+     SymDebug(sym);
+     
+     if (sem->subTag == ID) {
+        ASSERT(sym->symType == SymVar);
+        ObjCopy(sem->ptype, sym->typePtr, PType);
+//        sem->var = var->typeSym;
+     } else if (sem->subTag == CALL) {
+        ASSERT(sym->symType == SymMethod);
+        Method *method = sym->typePtr;
+        ObjCopy(sem->ptype, &method->ret, PType);
+//        sem->typeSym = ret->typeSym;
+     } else if (sem->subTag == ARRAY_MEMBER) {
+        sem->ptype = sym->typePtr;
+//       ERROR();
+     } else {
+        ERROR();
+     }
+     
+     debug("SaAtom(id=%s)\n", id);
+     PTypeDebug(sem->ptype);
+     debug("\n");
+}
+*/
+
+/*
 // =================== Semantic Analysis ====================================
 void semanticAnalysis(Tree *tree, SymTable *symTable) { // Semantic Analysis
     SA *sa = SaNew(tree, symTable);
@@ -27,25 +114,19 @@ void SaAllChilds(SA *sa, Tree *node) {
          Tree *c = child(node, i);
          SaTree(sa, c);
     }
-}
-
-char *token(Tree *node) {
-    SemToken *sem=node->sem;
-    return sem->token;
-}
-
+} */
+/*
 Tree* SaPushBlock(SA *sa, Tree *block) {
     ArrayPush(sa->blockStack, block);
 }
 
 Tree* SaPopBlock(SA *sa) {
-    return ArrayPop(sa->blockStack, NULL);
+    return ArrayPop(sa->blockStack);
 }
 
 Tree* SaPeekBlock(SA *sa) {
     return ArrayPeek(sa->blockStack);
 }
-
 char *op2type(Tree *a, Tree *op, Tree *b) {
     if (a->type != b->type)
         ERROR();
@@ -57,6 +138,8 @@ void setIdType(Tree *id, char *type) {
     debug("setIdType(%s, %s)\n", token(id), type);
     id->type = strNew(type);
 }
+*/
+/*
 
 Symbol* SaSymbolLookup(SA *sa, char *name) {
     int i;
@@ -73,22 +156,21 @@ Symbol* SaSymbolLookup(SA *sa, char *name) {
 Symbol* SaGlobalLookup(SA *sa, char *name) {
     return SymTableGet(sa->symTable, sa->tree, name);
 }
-/*
 // 取得 pStruct (STRUCT) 的子欄位 field 的 
 Symbol* SaFindStructField(SA *sa, char *structType, char *fieldName) { 
     Symbol *structSym = SaGlobalLookup(sa, structType);
     return SymTableGet(sa->symTable, structSym->node, fieldName);
 }
-*/
 void strip(char *str, char c) {
     int last = strlen(str)-1;
     if (str[last] == c)
         str[last] = '\0';
 }
+*/
 
 // ATOM = ID (([ EXP ])* |( EXP_LIST? ))
-void SaAtom(SA *sa, Tree *atomLast, char *op, Tree *atom) {
-/*    SemAtom *sem = atom->sem;
+/*void SaAtom(SA *sa, Tree *atomLast, char *op, Tree *atom) {
+    SemAtom *sem = atom->sem;
     char *id = token(sem->id);
     Symbol *sym = NULL;
     char typeNow[100];
@@ -125,7 +207,6 @@ void SaAtom(SA *sa, Tree *atomLast, char *op, Tree *atom) {
     }
     atom->type = newStr(typeNow);
     debug("atom->type=%s\n", atom->type);
-*/
 }
 
 void starType(char *type, int starCount, char *rzType) {
@@ -134,24 +215,25 @@ void starType(char *type, int starCount, char *rzType) {
     stars[starCount]='\0';
     sprintf(rzType, "%s%s", type, stars);
 }
-
+*/
+/*
 void SaTree(SA *sa, Tree *node) {
-/*    int i;
+    int i;
     char type[100];
     Array *childs = node->childs;
     char *tag = node->tag;
-    Tree *scope = SaPeekBlock(sa);
+//     Tree *scope = SaPeekBlock(sa);
     
     // Top-Down: 遞回下降時，設定每個節點的形態。 
     if (tag == PROG) { // PROG = (STRUCT | METHOD | DECL ; )*
-        SaPushBlock(sa, node);
+//        SaPushBlock(sa, node);
     } else if (tag == STRUCT) { // STRUCT = struct ID { DECL_LIST ; }
         SemStruct *sem = node->sem;
         sem->fields = ArrayNew(2);
         char *id = token(sem->id);
         Symbol *sym = SymNew(scope, id, STRUCT);
         SymTablePut(sa->symTable, sym);
-        SaPushBlock(sa, node);
+//        SaPushBlock(sa, node);
     } else if (tag == METHOD) { // METHOD = TYPE ** ID(DECL_LIST?) BLOCK
         SemMethod *sem = node->sem;
         char *id = token(sem->id);
@@ -163,12 +245,12 @@ void SaTree(SA *sa, Tree *node) {
         sem->id->type = newStr(type);
         debug("returnType = %s\n", returnType);
 //        ASSERT(FALSE); 
-        SaPushBlock(sa, node);
+//        SaPushBlock(sa, node);
     } else if (tag == BLOCK) { // BLOCK = { BASE_LIST }
         SemBlock *sem = node->sem;
         Symbol *sym = SymNew(scope, "", BLOCK);
         SymTablePut(sa->symTable, sym);
-        SaPushBlock(sa, node);
+//        SaPushBlock(sa, node);
     } else if (tag == DECL) { // DECL = TYPE VAR_LIST
         // 在 TYPE 時設定 sa->type，給 VAR 節點使用。 
     } else if (tag == TYPE) { // TYPE = (byte | char | int | float | ID) (最後一個 ID 必須是 TYPE [STRUCT])
@@ -227,8 +309,8 @@ void SaTree(SA *sa, Tree *node) {
         if (sem->exp1 != NULL && sem->exp2 != NULL)
             node->type = op2type(sem->exp1, sem->op, sem->exp2);
     }
-*/
 }
+*/
 /*
 SemStruct* StructNew() {
     SemStruct *s = ObjNew(SemStruct, 1);

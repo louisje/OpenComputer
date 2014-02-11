@@ -1,5 +1,5 @@
 CC   = gcc$(EXESUF) -DDEBUG
-OBJ  = Parser.o Tree.o Lib.o Scanner.o Array.o Compiler.o HashTable.o Generator.o Assembler.o Cpu.o OpTable.o OS.o PCode.o SymTable.o Interpreter.o Semantic.o
+OBJ  = Parser.o Tree.o Lib.o Scanner.o Array.o Compiler.o HashTable.o Generator.o Assembler.o Vm.o OpTable.o Os.o PCode.o SymTable.o Interpreter.o
 LINKOBJ = $(OBJ)
 LIBS = 
 INCS = 

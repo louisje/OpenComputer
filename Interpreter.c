@@ -5,7 +5,7 @@ void interpret(char *cFile) { // 解譯器主程式
 	char *cText = fileToStr(cFile);               //   讀取檔案到 cText 字串中。   
 	SymTable *symTable = SymTableNew();
 	Scanner *scanner = ScannerNew(cText);
-	Tree *tree = parse(cText);           //   剖析程式 (cText) 轉為語法樹 
+	Tree *tree = parse(cText, symTable);           //   剖析程式 (cText) 轉為語法樹 
 /*	Interpreter *inter = InterNew(); 
 	inter->tree = parser->tree;
 	char rzVar[100];

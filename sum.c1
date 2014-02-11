@@ -5,14 +5,7 @@ int sum(int n) {
 	return s;
 }
 
-struct Node {
-  int  days[30];
-  Node *left, *right;
-}
-
 int main() {
-    int a[10][5];
-    
 	int s = sum(10);
 	return s;
 }

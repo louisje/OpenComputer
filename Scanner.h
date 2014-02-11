@@ -5,7 +5,7 @@
 #ifndef SCANNER_H
 #define SCANNER_H
 
-#include "Lib.h"
+#include "lib.h"
 
 typedef struct {        // 掃描器的物件結構              
   char *text;           //   輸入的程式 (text) 

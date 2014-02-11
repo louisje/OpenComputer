@@ -1,0 +1,31 @@
+int x=1, y=2;
+
+struct Date {
+    int year, month, day;
+}
+
+struct Person {
+	char *name;
+	Date birthday;
+}
+
+int total(int* a) {
+	int s = 0;
+	for (int i=0; i<10; i++)
+		s = s+a[i];
+	return s;
+}
+
+char* getName(Person *p) {
+	return p->name;
+}
+
+int main() {
+	int b[10], a=3;
+	int t = total(b);
+	Person p;
+	p.birthday.year = 1990;
+	t = 3 + (5 * a);
+	return t;
+}
+

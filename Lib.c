@@ -122,16 +122,18 @@ BOOL strTail(char *str, char *tail) {
   return (strcmp(str+strLen-tailLen, tail)==0);
 }
 
-// 功能：檢查字串開頭是否為 head 
-// 範例：strHead("abcdefg", "abc") 會傳回 TRUE
+// 功能：切割字串為兩部分 
+// 範例：strCut("abcd/efg", "/", head, tail) 會設定 head = abcd, tail=efg 
 void strCut(char *str, char *spliter, char *head, char *tail) {
     int i, len = strlen(str);
+    strcpy(head, str);
     for (i=0; i<len; i++) {
         if (strMember(str[i], spliter)) {
             if (head != NULL)
                 strSubstr(head, str, 0, i);
             if (tail != NULL)
                 strSubstr(tail, str, i+1, len-(i+1));
+            break;
         }
     }
 }

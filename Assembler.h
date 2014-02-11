@@ -1,7 +1,7 @@
 #ifndef ASSEMBLER_H
 #define ASSEMBLER_H
 
-#include "Cpu.h"
+#include "Vm.h"
 
 typedef struct {                                    // 組譯器物件                     
   Array *codes;                                     //   指令物件串列                 
@@ -22,6 +22,7 @@ typedef struct {                                    // 指令物件
   int  cx;
 } AsmCode;                                          //   等欄位                       
                                                                                    
+void AsmTest();
 void assemble(char *asmFile, char *objFile);        // 組譯器的主程式              
                                                                                    
 Assembler* AsmNew();                                // 組譯器的建構函數               

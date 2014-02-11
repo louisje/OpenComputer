@@ -74,6 +74,7 @@ DEF(PARAM_LIST ,"PARAM_LIST")//串列：PARAM_LIST = PARAM (, PARAM)*
 DEF(EXP_LIST ,"EXP_LIST")   // 串列：EXP_LIST = EXP (, EXP)*
 DEF(VAR_LIST ,"VAR_LIST")   // 串列：VAR_LIST = VAR (, VAR)*
 DEF(BTYPE, "BTYPE")         // 基本型態：(int|float|...) 
+DEF(ETYPE, "ETYPE")         // 基本型態：(int|float|...) 加上 Structure 型態 
 DEF(GLOBAL, "GLOBAL")       // 全域區塊：.global 
 // DEF(sCOLON ,":")
 // DEF(sMUL ,"*") // 符號 *

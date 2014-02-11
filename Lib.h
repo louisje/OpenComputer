@@ -33,6 +33,7 @@ void  memFree(void *ptr);   // 記憶體釋放函數
 void  memCheck();           // 記憶體檢查函數
 #define ObjNew(type, count) memNew(count*sizeof(type)) // 分配物件空間 
 #define ObjFree memFree     // 釋放物件空間
+#define ObjCopy(to, from, type) memcpy(to, from, sizeof(type)) // 分配物件空間
 
 // =================== 字串函數 ================== 
 char* strNew(char *str); // 建立字串 

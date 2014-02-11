@@ -73,4 +73,8 @@ int OpPrintln(Op *op);
 extern char *opList[];
 extern HashTable *opTable;
 
+#define OpTable HashTable
+#define OpTableGet HashTableGet
+#define OpTablePut HashTablePut
+
 #endif

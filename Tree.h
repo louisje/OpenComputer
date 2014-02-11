@@ -19,5 +19,7 @@ Tree* child(Tree *node, int i);
 char* token(Tree *node);
 void debugNode(Tree *node);
 void NodeFree(Tree *node);
+Tree *TokenNodeNew(char *token, char *tag);
+Tree *TokenNodeFree(Tree *node);
 
 #endif

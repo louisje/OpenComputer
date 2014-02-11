@@ -7,7 +7,11 @@
 #include "Lib.h"
 #include "SymTable.h"
 #include "Parser.h"
-
+/*
+typedef enum { SCOPE_GLOBAL, SCOPE_METHOD_NAME, SCOPE_PARAM, 
+SCOPE_LOCAL, SCOPE_CODE, SCOPE_STRUCT_NAME, SCOPE_STRUCT, SCOPE_DECL 
+} SCOPE;
+*/
 // #include "Asm0.h"
 
 // typedef enum { GLOBAL, LOCAL, PARAM, CODE, STRUCT } SCOPE;
@@ -18,7 +22,7 @@ typedef struct {                                                                
   Tree *tree;                                                                             //   剖析樹
   FILE *asmFile;                                                                          //   輸出的CPU0組合語言檔
 	int forCount, ifCount, whileCount, varCount, labelCount, stringCount;                                            //   標記與臨時變數的數量
-	SCOPE scope;
+//	SCOPE scope;
 	PCodeStyle pCodeStyle;
 	char type[100];
 } Generator;
@@ -28,7 +32,7 @@ Generator *GenNew();                                                            
 void GenFree(Generator *g);                                                               // Generator 的解構函數
 void GenCode(Generator *g, Tree *node, char *rzVar);                                     // 產生組合語言程式碼
 void GenData(Generator *g);
-void GenDecl(Generator *g, Tree *node, SCOPE scope);
+void GenDecl(Generator *g, Tree *node);
 void GenPcode(Generator *g, char* label, char* op, char* p1, char* p2, char* pTo);
 void GenTempVar(Generator *g, char *tempVar);
 void negateOp(char *condOp, char *negOp);

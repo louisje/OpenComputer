@@ -1,5 +1,10 @@
 #include "Assembler.h"
 
+void AsmTest() {
+//    assemble("sum.asm1", "sum.obj1");
+    assemble("cpu0stest.asm0", "cpu0stest.obj0");
+}
+
 void assemble(char *asmFile, char *objFile) {                   // ²ÕÄ¶¾¹ªº¥D­n¨ç¼Æ
   printf("Assembler:asmFile=%s objFile=%s\n", asmFile,objFile); // ¿é¤J²Õ¦X»y¨¥¡B¿é¥X¥ØªºÀÉ
   printf("===============Assemble=============\n");
@@ -12,6 +17,7 @@ void assemble(char *asmFile, char *objFile) {                   // ²ÕÄ¶¾¹ªº¥D­n¨
   AsmSaveObjFile(a, objFile);                                      
   AsmFree(a);                                                   // ¿é¥X¥ØªºÀÉ   
 	memFree(text);                                             // ÄÀ©ñ°O¾ÐÅé   
+	memCheck();
 }                                                               
 
 Assembler* AsmNew() {
@@ -109,13 +115,13 @@ void AsmTranslateCode(Assembler *a, AsmCode *code) {                       // «ü
                     sprintf(objPtr, "%2x", item[si]);
                     objPtr += 2;
                 }
-              } else if (isdigit(item[0]))
+			} else if (isdigit(item[0])) {
                 sprintf(objPtr, format, atoi(item));
-              else {
+            } else {
                 AsmCode *itemCode = HashTableGet(a->symTable, item);
                 sprintf(objPtr, format, itemCode->address);
               }
-              strFree(item);
+//			strFree(item);
               objPtr += strlen(objPtr);
           }
           break;
@@ -161,9 +167,15 @@ int AsmCodePrintln(AsmCode *code) {
 
 AsmCode* AsmCodeNew(char *line) {
   AsmCode* code = ObjNew(AsmCode,1);
-  Array* tokens = split(line, " \t+[],", REMOVE_SPLITER);
-  if (tokens->count == 0) { ArrayFree(tokens, strFree); return NULL; }
-	code->line = strNew(line);
+	char head[MAX_LEN];
+	strCut(line, "/", head, NULL);
+	Array* tokens = split(head, " \t+[],", REMOVE_SPLITER);
+	if (tokens->count == 0) { 
+       ArrayFree(tokens, strFree);
+       ObjFree(code);
+       return NULL; 
+    }
+	code->line = strNew(head);
   strTrim(code->line, code->line, SPACE);
   code->tokens = tokens;
   int tokenIdx = 0;
@@ -178,7 +190,7 @@ AsmCode* AsmCodeNew(char *line) {
   code->arg[0] = ArrayGet(tokens, tokenIdx++);
   code->arg[1] = ArrayGet(tokens, tokenIdx++);
   code->arg[2] = ArrayGet(tokens, tokenIdx++);
-	//  AsmCodePrintln(code);
+//	AsmCodePrintln(code);
   return code;
 }
 
@@ -201,10 +213,11 @@ void AsmCodeParse(AsmCode *code, Assembler *a) {
 }
 
 void AsmCodeFree(AsmCode *code) {
-	memFree(code->line);
+	strFree(code->line);
   ArrayFree(code->tokens, strFree);
-	memFree(code->objCode);
-	memFree(code);
+	if (code->objCode != NULL)
+ 	   ObjFree(code->objCode);
+	ObjFree(code);
 }
 
 int AsmCodeSize(AsmCode *code) {                    // ­pºâ«ü¥Oªº¤j¤p     

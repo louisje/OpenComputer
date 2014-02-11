@@ -1,7 +1,7 @@
 [Project]
 FileName=SS1.dev
 Name=SS1
-UnitCount=36
+UnitCount=35
 Type=1
 Ver=1
 ObjFiles=
@@ -168,7 +168,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit14]
-FileName=Cpu.c
+FileName=Vm.c
 CompileCpp=0
 Folder=SS1
 Compile=1
@@ -178,7 +178,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit15]
-FileName=Cpu.h
+FileName=Vm.h
 CompileCpp=0
 Folder=SS1
 Compile=1
@@ -248,7 +248,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit22]
-FileName=OS.c
+FileName=Os.c
 CompileCpp=0
 Folder=SS1
 Compile=1
@@ -258,7 +258,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit23]
-FileName=OS.h
+FileName=Os.h
 CompileCpp=0
 Folder=SS1
 Compile=1
@@ -328,11 +328,11 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit34]
-FileName=Semantic.c
+FileName=test.c1
 CompileCpp=0
 Folder=SS1
-Compile=1
-Link=1
+Compile=0
+Link=0
 Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
@@ -377,16 +377,6 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit33]
-FileName=Semantic.h
-CompileCpp=0
-Folder=SS1
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
 [Unit37]
 FileName=Makefile
 Folder=SS1
@@ -406,6 +396,15 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit35]
+FileName=os0.asm1
+Folder=SS1
+Compile=0
+Link=0
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit33]
 FileName=Makefile
 Folder=SS1
 Compile=0
