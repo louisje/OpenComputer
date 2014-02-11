@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdarg.h>
 
 // 基本常數 
 #define FALSE   0
@@ -26,6 +27,7 @@
 #define ObjNew(type, count) newMemory(count*sizeof(type))
 #define ObjFree freeMemory
 #define strFree freeMemory
+#define ERROR()	do { printf("ERROR => file:%s, line: %d\n", __FILE__, __LINE__);system("pause");exit(1); } while (1)
 
 void* newMemory(int size);
 void freeMemory(void *ptr);
@@ -47,6 +49,9 @@ void strToUpper(char *str);
 BOOL strPartOf(char *token, char *set);
 void strPrint(void *data);
 void strPrintln(void *data);
+
+// 錯誤處理
+void debug(const char *fmt, ...);
 
 // 函數指標 (用於ArrayEach(), HashTableEach()中)
 typedef void (*FuncPtr1) (void *);

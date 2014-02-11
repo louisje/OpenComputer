@@ -136,3 +136,9 @@ void strToUpper(char *str) {
   for (i = 0; i<strlen(str); i++)
     str[i] = toupper(str[i]);
 }
+
+void debug(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  vprintf(fmt, args);
+}

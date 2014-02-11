@@ -5,14 +5,15 @@ char STRING[] = "string";
 char INTEGER[] = "integer";
 char FLOAT[] = "float";
 char ID[]  = "id";
-char KEYWORDS[] = "|if|else|for|while|yield|return|class|is|def|throw|";
+char KEYWORDS[] = "|if|else|for|while|return|def|int|byte|float|ptr|";
 char OP1[] = "|++|--|";
-char OP2[] = "|+|-|*|/|%|&|^|<|>|==|!=|<=|>=|>>|<<|";
-// char COND_OP[] = "|==|!=|<=|>=|<|>|";
+char OP2[] = "|+|-|*|/|%|&|^|";
+char TYPE[] = "|int|byte|float|ptr|";
+char COND_OP[] = "|==|!=|<=|>=|<|>|";
 char OP[]  = "+-*/%<=>!";
 
 #define ch() (scanner->text[scanner->textIdx])
-#define next() (scanner->textIdx++)
+#define cnext() (scanner->textIdx++)
 
 Scanner* ScannerNew(char *pText) {
   Scanner *scanner = ObjNew(Scanner, 1);
@@ -28,25 +29,25 @@ void ScannerFree(Scanner *scanner) {
 
 char *ScannerScan(Scanner *scanner) {                                           // 掃描下一個詞彙
   while (strMember(ch(), SPACE))                                                // 忽略空白
-    next();
+    cnext();
   if (scanner->textIdx >= scanner->textLen)                                     // 檢查是否超過範圍
     return NULL;
   char c = ch();                                                                // 取得下一個字元
   int begin = scanner->textIdx;                                                 // 記住詞彙開始點
   if (c == '\"') { // string = ".."                                             // 如果是 "，代表字串開頭，
-    next(); // skip begin quote "
-    while (ch() != '\"') next();                                                // 一直讀到下一個 " 符號為止。
-    next(); // skip end quote "
+    cnext(); // skip begin quote "
+    while (ch() != '\"') cnext();                                                // 一直讀到下一個 " 符號為止。
+    cnext(); // skip end quote "
   } else if (strMember(c, OP)) { // OP , ex : ++, --, <=, >=, ...               // 如果是OP(+-*/<=>!等符號)
-    while (strMember(ch(), OP)) next();                                         // 一直讀到不是OP為止
+    while (strMember(ch(), OP)) cnext();                                         // 一直讀到不是OP為止
   } else if (strMember(c, DIGIT)) { // number, ex : 312, 77568, ...             // 如果是數字
-    while (strMember(ch(), DIGIT)) next();                                      // 一直讀到不是數字為止
-    if (ch() == '.') next();
-    while (strMember(ch(), DIGIT)) next();
+    while (strMember(ch(), DIGIT)) cnext();                                      // 一直讀到不是數字為止
+    if (ch() == '.') cnext();
+    while (strMember(ch(), DIGIT)) cnext();
   } else if (strMember(c, ALPHA)) { // name, ex : int, sum, i, for, if, ....    // 如果是英文字母
-    while (strMember(ch(), ALPHA) || strMember(ch(), DIGIT)) next();            // 一直讀到不是英文字母 (或數字)為止 (ex: x1y2z)
+    while (strMember(ch(), ALPHA) || strMember(ch(), DIGIT)) cnext();            // 一直讀到不是英文字母 (或數字)為止 (ex: x1y2z)
   } else // some other symbol, such as #
-    next();                                                                     // 否則，傳回單一字元
+    cnext();                                                                     // 否則，傳回單一字元
   strSubstr(scanner->token, scanner->text, begin, scanner->textIdx-begin);      // 設定token為(begin…textIdx) 之間的子字串
   return scanner->token;                                                        // 傳回token詞彙
 }
