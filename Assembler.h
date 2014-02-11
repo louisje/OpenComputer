@@ -1,7 +1,7 @@
 #ifndef ASSEMBLER_H
 #define ASSEMBLER_H
 
-#include "Cpu0.h"
+#include "Cpu.h"
 
 typedef struct {                                    // 組譯器物件                     
   Array *codes;                                     //   指令物件串列                 

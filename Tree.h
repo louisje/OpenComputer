@@ -2,16 +2,22 @@
 #define TREE_H
 
 #include "Array.h"
+#include "Scanner.h"
 
-typedef struct {
-  char *type;
-  char *value;
+typedef struct _Tree {
+    char *tag, *type;
+    void *sem;
   Array* childs;
 } Tree;
 
-Tree* TreeNew(char *pType, char *pValue);
+Tree *TreeNew(char *tag);
 void TreeFree(Tree *tree);
 void TreeAddChild(Tree *tree, Tree *child);
+void TreePrintLevel(Tree *tree, int level);
 void TreePrint(Tree *tree);
+Tree* child(Tree *node, int i);
+char* token(Tree *node);
+void debugNode(Tree *node);
+void NodeFree(Tree *node);
 
 #endif

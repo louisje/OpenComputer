@@ -18,6 +18,7 @@
 #define OP_SUB  0x14
 #define OP_MUL  0x15
 #define OP_DIV  0x16
+#define OP_MOD  0x17
 #define OP_AND  0x18
 #define OP_OR   0x19
 #define OP_XOR  0x1A
@@ -39,6 +40,14 @@
 #define OP_POP  0x31
 #define OP_PUSHB 0x32
 #define OP_POPB 0x33
+#define OP_LAND 0x40
+#define OP_LOR  0x41
+#define OP_EQ   0x42
+#define OP_NE   0x43
+#define OP_GT   0x44
+#define OP_LT   0x45
+#define OP_GE   0x46
+#define OP_LE   0x47
 
 #define OP_RESW 0xF0
 #define OP_RESB 0xF1

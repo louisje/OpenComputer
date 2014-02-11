@@ -1,7 +1,7 @@
-#ifndef MACHINE0_H
-#define MACHINE0_H
+#ifndef OS_H
+#define OS_H
 
-#include "Cpu0.h"
+#include "Cpu.h"
 
 #define M0MemorySize 65536
 #define Timer        ((int*) &(cpu0->m[65500]))

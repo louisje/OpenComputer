@@ -1,367 +1,500 @@
 #include "Parser.h"
-/*
-BASE_LIST = BASE*
-BASE = IF | FOR | WHILE | BLOCK | METHOD | STMT ;
-IF = if (EXP) BASE (else BASE)?
-FOR = for (STMT ; EXP ; STMT) BASE
-WHILE = while (EXP) BASE
-METHOD = def ID(DECL_LIST) BLOCK
-STMT = return EXP | DECL | ID (EXP_LIST) | ID = EXP | ID OP1
-DECL = TYPE VAR_LIST
-BLOCK = { BASE_LIST }
-VAR = ID (= EXP)?
-EXP = TERM (OP2 TERM)?
-TERM = ( EXP (OP2 EXP)? ) | ITEM
-ITEM = INT | FLOAT | STRING | ID | ID(EXP_LIST?)
-EXP_LIST = EXP (, EXP)*
-VAR_LIST = VAR (, VAR)*
-DECL_LIST = DECL (, DECL)*
 
-ID = [A-Za-z_][0-9A-Za-z_]*
-INT = [0-9]+
-FLOAT = [0-9]+.[0-9]+
-STRING = ".*"
-OP2 = +|-|/|*|%|&|&&|^|<<|>>|<|>|<=|>=|==|!=  與 | , ||
-OP1 = ++ | --
-OPC = <|>|<=|>=|==|!=
-OPL = && | ||
-TYPE = int | byte | float | ptr
-*/
-
-Parser *parse(char *text) {        // 剖析器的主要函數
-  Parser *p=ParserNew();           // 建立剖析器
-  ParserParse(p, text);            // 開始剖析
-  return p;                        // 傳回剖析器
+void ParserTest(char *fileName) {
+	debug("=======ParserTest()==========\n");
+    SymTable *symTable = SymTableNew();
+    char *text = fileToStr(fileName);
+    Tree *tree = parse(text);
+    TreeFree(tree);
+    strFree(text);
+    SymTableFree(symTable);
+    memCheck(); // 檢查記憶體     
 }
 
-char* nextToken(Parser *p);
-char* tokenToType(char *token);
-Tree* push(Parser *p, char* term);
-Tree* pop(Parser *p, char* term);
-Tree* parseBaseList(Parser *p);
-void parseBlock(Parser *p);
-void parseFor(Parser *p);
-void parseIf(Parser *p);
-void parseWhile(Parser *p);
-void parseBase(Parser *p);
-void parseStmt(Parser *p);
-void parseDecl(Parser *p);
-void parseExp(Parser *p);
-void parseTerm(Parser *p);
-void parseMethod(Parser *p);
-void parseItem(Parser *p);
-void parseExpList(Parser *p);
-void parseDeclList(Parser *p);
-void parseVarList(Parser *p);
-BOOL isEnd(Parser *p);
-BOOL isNext(Parser *p, char *pTypes);
-char *next(Parser *p, char *pTypes);
-
-Parser *ParserNew() {
-  Parser *parser = ObjNew(Parser, 1);
-  parser->tokens = NULL;
-  parser->tree = NULL;
-  parser->stack = ArrayNew(10);
-  return parser;
+Tree *parse(char *text) {    // 剖析器的主要函數
+	Scanner *scanner = ScannerNew(text);
+	Parser *p=ParserNew(scanner);              // 建立剖析器
+//	ParserParse(p, text);                      // 開始剖析
+	Tree *tree = p->tree;
+	ParserFree(p);
+	ScannerFree(scanner);
+	return tree;                            // 傳回剖析器
 }
 
-void ParserFree(Parser *parser) {
-  ArrayFree(parser->tokens, strFree);
-  ArrayFree(parser->stack, NULL);
-  TreeFree(parser->tree);
-  ObjFree(parser);
+Parser *ParserNew(Scanner *scanner) {
+	Parser *p = ObjNew(Parser, 1);
+	p->stack = ArrayNew(10);
+	p->blockStack = ArrayNew(10);
+	p->scanner = scanner;
+    ScannerNext(scanner);
+	return p;
+}
+
+void ParserFree(Parser *p) {
+	ArrayFree(p->blockStack, NULL);
+	ArrayFree(p->stack, NULL);
+	ObjFree(p);
 }
 
 void ParserParse(Parser *p, char *text) {                 // 剖析物件的主函數
-  printf("======= tokenize =======\n");                   //   首先呼叫掃描器的主函數 tokenize() 將程式轉換為詞彙串列
-  p->tokens = tokenize(text);
-  printTokens(p->tokens);
-  p->tokenIdx = 0;
-  printf("======= parsing ========\n");
-  p->tree = parseBaseList(p);                                 // 開始剖析 PROG = BaseList
+	debug("======= parsing ========\n");
+	p->tree = parseProg(p);                                 // 開始剖析 PROG = BaseList
   if (p->stack->count != 0) {                             // 如果剖析完成後堆疊是空的，那就是剖析成功
     debug("parse fail:stack.count=%d", p->stack->count); //   否則就提示錯誤訊息
 	ERROR();
   }
 }
 
-// BASE_LIST = BASE*
-Tree *parseBaseList(Parser *p) {             // 剖析 PROG=BaseList 規則
-  push(p, "BASE_LIST");                      // 建立 BaseList 的樹根
-  while (!isEnd(p) && !isNext(p, "}"))       //  剖析 BASE，直到程式結束或碰到 } 為止
-      parseBase(p);
-  pop(p, "BASE_LIST");                       // 取出 BaseList 的剖析樹
+// 如果開頭是 TYPE ID(，也就是  (int|byte|char|float|ID)** ID(，那就是 Method。 
+BOOL isMethod(Parser *p) {
+    BOOL rzFlag = TRUE;
+    Scanner *s = p->scanner;
+    ScannerStore(s);
+    if (isNext(p, "int|byte|char|float|ID")) ScannerNext(s); else rzFlag=FALSE;
+    while (isNext(p, "*")) ScannerNext(s);
+    if (isNext(p, ID)) ScannerNext(s); else rzFlag=FALSE;
+    if (!isNext(p, "(")) rzFlag=FALSE;
+    ScannerRestore(s);
+    return rzFlag;
+}
+
+// PROG = (STRUCT | METHOD | DECL ; )*
+Tree *parseProg(Parser *p) {             // 剖析 PROG=BaseList 規則
+	SemProg *sem=push(p, PROG, SemProg); // 建立 BaseList 的樹根
+	p->block = BlockNew(&Global, "", SymBlock);
+	ArrayPush(p->blockStack, p->block);
+	while (!isEnd(p)) {     //  剖析 BASE，直到程式結束或碰到 } 為止
+	    if (isNext(p, "struct"))
+	       parseStruct(p);
+	    else {
+           if (isMethod(p)) { // METHOD = TYPE ID(DECL_LIST?) BLOCK
+                parseMethod(p);
+           } else { // 否則就必須是 DECL ; 
+                parseDecl(p);
+	            next(p, ";");
+          }
+        }
+    }
+    p->block = ArrayPop(p->blockStack, (FuncPtr1) BlockFree);
+	return pop(p, PROG);                     // 取出 BaseList 的剖析樹
 }                                           // 取出 PROG 的剖析樹
 
-// BASE = IF | FOR | WHILE | METHOD | BLOCK | STMT ;
-void parseBase(Parser *p) {                 // 剖析 BASE 規則
-  push(p, "BASE");                          // 建立 BASE 的剖析樹
+// BASE = IF | FOR | WHILE | BLOCK | STMT ;
+Tree* parseBase(Parser *p) {                 // 剖析 BASE 規則
+	SemBase *sem=push(p, BASE, SemBase);                          // 建立 BASE 的剖析樹
   if (isNext(p, "if"))                      // 如果下一個詞彙是 if
     parseIf(p);                             //  根據 if 規則進行剖析
   else if (isNext(p, "for"))                // 如果下一個詞彙是 for
     parseFor(p);                            //  根據 FOR 規則進行剖析
   else if (isNext(p, "while"))                // 如果下一個詞彙是 for
     parseWhile(p);                            //  根據 FOR 規則進行剖析
-  else if (isNext(p, "def"))                // 如果下一個詞彙是 def
-    parseMethod(p);                         //  根據 method 規則進行剖析
   else if (isNext(p, "{"))
     parseBlock(p);
   else {                                     // 否則
     parseStmt(p);                           //  根據 STMT 規則進行剖析
 	next(p, ";");
   }
-  pop(p, "BASE");                           // 取出 BASE 的剖析樹
+	return pop(p, BASE);                           // 取出 BASE 的剖析樹
 }
 
-// BLOCK = { BASE_LIST }
-void parseBlock(Parser *p) {
-  push(p, "BLOCK");
+// BLOCK = { BASE* }
+Tree* parseBlock(Parser *p) {
+	SemBlock *sem=push(p, BLOCK, SemBlock);
+	p->block = BlockNew(p->block, "", SymBlock);
+	ArrayPush(p->blockStack, p->block);
   next(p, "{");
-  parseBaseList(p);
+	while (!isNext(p, "}")) 
+        parseBase(p);
   next(p, "}");
-  pop(p, "BLOCK");
+    p->block = ArrayPop(p->blockStack, (FuncPtr1) BlockFree);
+	return pop(p, BLOCK);
 }
 
-// METHOD = def ID(DECL_LIST) BLOCK
-void parseMethod(Parser *p) {
-  push(p, "METHOD");
-  next(p, "def");
-  next(p, ID);
+// METHOD = TYPE **ID (PARAM_LIST?) BLOCK
+Tree* parseMethod(Parser *p) {
+	SemMethod *sem=push(p, METHOD, SemMethod);
+	sem->type=parseType(p); // 剖析 TYPE
+
+	// 剖析 ** (n 個星號, n>=0)
+	int starCount = 0; // 數屬看有幾個星號
+    while (isNext(p, "*")) { 
+        next(p, "*");
+        starCount ++;
+    }
+    sem->id = next(p, ID); // 剖析 ID
+    
+	char *id = token(sem->id);
+	
+	// 建立 ID 的符號記錄 Symbol(id, METHOD) 
+//	Symbol *sym = SymNew(&Global, id, METHOD);
+
+	// 建立 Method 結構 
+	Method *method = MethodNew();
+	method->ret.typeName = p->decl.typeName;
+	method->ret.starCount = p->decl.starCount;
+//	SymTablePut(p->symTable, sym);
+	
+	// 建立新區塊並推入堆疊 
+	p->block = BlockNew(p->block, id, SymMethod);
+	ArrayPush(p->blockStack, p->block);
+	
+    // 剖析參數部分 (PARAM_LIST?) 
   next(p, "(");
-  if (!isNext(p, ")"))
-    parseDeclList(p);
+	if (!isNext(p, ")")) // 剖析 PARAM_LIST?
+		sem->paramList = parseParamList(p); 
   next(p, ")");
-  parseBlock(p);
-  pop(p, "METHOD");
+	sem->block = parseBlock(p); // 剖析 BLOCK
+    p->block = ArrayPop(p->blockStack, (FuncPtr1) BlockFree);
+	return pop(p, METHOD);
 }
 
-// FOR = for ( STMT ; EXP ; STMT) BASE
-void parseFor(Parser *p) {                  
-  push(p, "FOR");                           // 建立 FOR 的樹根
+// STRUCT = struct ID { (DECL ;)* }
+Tree* parseStruct(Parser *p) {
+	SemStruct *sem=push(p, STRUCT, SemStruct);
+
+	next(p, "struct"); // 剖析 struct 
+	sem->id = next(p, ID); // 剖析 ID
+	char *id = token(sem->id);
+	
+	// 建立 ID 的符號記錄 Symbol(id, METHOD) 
+	Symbol *sym = SymNew(&Global, id, SymStruct);
+//	SymTablePut(p->symTable, sym);
+	
+	// 建立新區塊並推入堆疊 
+	p->block = BlockNew(p->block, id, SymStruct);
+	ArrayPush(p->blockStack, p->block);
+	
+	// 剖析 { (DECL ;)* }
+	next(p, "{"); 
+	while (!isNext(p, "}")) {
+        parseDecl(p);
+        next(p, ";");
+    }
+	next(p, "}");
+	return pop(p, STRUCT);
+}
+
+// FOR = for (STMT ; EXP ; STMT) BASE
+Tree* parseFor(Parser *p) {                  
+	SemFor *sem=push(p, FOR, SemFor);                           // 建立 FOR 的樹根
   next(p, "for");                           // 取得 for
   next(p, "(");                             // 取得 (
-  parseStmt(p);                             // 剖析 STMT
+	sem->stmt1 = parseStmt(p);                             // 剖析 STMT
   next(p, ";");                             // 取得 ;
-	parseExp(p);                              // 剖析 EXP
+	sem->exp = parseExp(p);                              // 剖析 EXP
   next(p, ";");                             // 取得 ;
-  parseStmt(p);                             // 剖析 STMT
+	sem->stmt2 = parseStmt(p);                             // 剖析 STMT
   next(p, ")");                             // 取得 )
   parseBase(p);                             // 剖析 BASE
-  pop(p, "FOR");                            // 取出 FOR 的剖析樹
+	return pop(p, FOR);                            // 取出 FOR 的剖析樹
 }
 
 // IF = if (EXP) BASE (else BASE)?
-void parseIf(Parser *p) {
-	push(p, "IF");
+Tree* parseIf(Parser *p) {
+	SemIf *sem=push(p, IF, SemIf);
 	next(p, "if");
 	next(p, "(");
-	parseExp(p);
+	sem->exp = parseExp(p);
 	next(p, ")");
-	parseBase(p);
+	sem->base1 = parseBase(p);
   if (isNext(p, "else")) {
     next(p, "else");
-    parseBase(p);
+		sem->base2 = parseBase(p);
   }
-  pop(p, "IF");
+	return pop(p, IF);
 }
 
 // WHILE = while (EXP) BASE
-void parseWhile(Parser *p) {                  // 建立 FOR 的樹根
-  push(p, "WHILE");                           // 取得 for
+Tree* parseWhile(Parser *p) {                  // 建立 FOR 的樹根
+	SemWhile *sem=push(p, WHILE, SemWhile);                           // 取得 for
   next(p, "while");                           // 取得 (
   next(p, "(");                             // 剖析 STMT
-	parseExp(p);                             // 取得 ;
+	sem->exp = parseExp(p);                             // 取得 ;
   next(p, ")");                             // 剖析 BASE
-  parseBase(p);                            // 取出 FOR 的剖析樹
-  pop(p, "WHILE");
+	sem->base = parseBase(p);                            // 取出 FOR 的剖析樹
+	return pop(p, WHILE);
 }
 
-// STMT = return EXP | DECL | ID (EXP_LIST) | ID = EXP | ID OP1
-// 注意： DECL_LIST 的第一個為 TYPE
-void parseStmt(Parser *p) {
-  push(p, "STMT");
+// 如果開頭是 TYPE ID，也就是  (int|byte|char|float|ID)** ID，那就是 DECL。 
+BOOL isDecl(Parser *p) {
+    BOOL rzFlag = TRUE;
+    Scanner *s = p->scanner;
+    ScannerStore(s);
+    if (isNext(p, "int|byte|char|float|ID")) ScannerNext(s); else rzFlag=FALSE;
+    while (isNext(p, "*")) ScannerNext(s);
+    if (!isNext(p, ID)) rzFlag=FALSE;
+    ScannerRestore(s);
+    return rzFlag;
+}
+
+// STMT = return EXP | DECL | PATH (EXP_LIST) | PATH = EXP | PATH OP1
+Tree* parseStmt(Parser *p) {
+	SemStmt *sem=push(p, STMT, SemStmt);
   if (isNext(p, "return")) {
     next(p, "return");
-    parseExp(p);
-  } else if (isNext(p, TYPE))
-    parseDecl(p);
-  else if (isNext(p, ID)) {
-    next(p, ID);
+		sem->exp = parseExp(p);
+	} else if (isDecl(p)) { // (isNext(p, SET_BTYPE)) { // DECL_LIST 的第一個為 TYPE
+		sem->decl = parseDecl(p);
+	} else {
+        sem->path = parsePath(p);
 	if (isNext(p, "(")) {
       next(p, "(");
-      parseExpList(p);
+			sem->expList = parseExpList(p);
 	  next(p, ")");
 	} else if (isNext(p, "=")) {
 	  next(p, "=");
-	  parseExp(p);
-	} else if (isNext(p, OP1)) {
-	  next(p, OP1);
+			sem->exp = parseExp(p);
+		} else if (isNext(p, SET_OP1)) {
+			next(p, SET_OP1);
 	} else
 	  ERROR();
   }
-  pop(p, "STMT");
+	return pop(p, STMT);
+}
+
+// PATH = ATOM (.|->) ATOM)*
+Tree* parsePath(Parser *p) {
+    SemPath *sem=push(p, PATH, SemPath);
+    parseAtom(p);
+    while (isNext(p, ".|->")) {
+        next(p, ".|->");
+        parseAtom(p);
+    }
+    return pop(p, PATH);
+}
+
+// ID (([ EXP ])* |( EXP_LIST? ))
+Tree* parseAtom(Parser *p) {
+    SemAtom *sem=push(p, ATOM, SemAtom);
+    sem->id = next(p, ID);
+    sem->subTag = ID;
+    if (isNext(p, "(")) {
+       next(p, "(");
+       if (!isNext(p, ")"))
+           sem->expList = parseExpList(p);
+       next(p, ")");
+       sem->subTag = CALL;
+    } else if (isNext(p, "[")) {
+        sem->subTag = ARRAY_MEMBER;
+        Array *exps = ArrayNew(2);
+        while (isNext(p, "[")) {
+            next(p, "[");
+            Tree *exp = parseExp(p);
+            ArrayAdd(exps, exp);
+            next(p, "]");
+        }
+    }
+    return pop(p, ATOM);
+}
+
+// PARAM = TYPE VAR
+Tree* parseParam(Parser *p) {
+	SemParam *sem = push(p, PARAM, SemParam);
+	sem->type = parseType(p);
+	sem->var = parseVar(p);
+	return pop(p, PARAM);  
 }
 
 // DECL = TYPE VAR_LIST
-void parseDecl(Parser *p) {
-  push(p, "DECL");
-  next(p, TYPE);
-  parseVarList(p);
-  pop(p, "DECL");  
+Tree* parseDecl(Parser *p) {
+	SemDecl *sem = push(p, DECL, SemDecl);
+	sem->type = parseType(p);
+	sem->varList = parseVarList(p);
+	return pop(p, DECL);  
 }
 
-// VAR = ID (= EXP)?
-void parseVar(Parser *p) {
-  push(p, "VAR");
-  next(p, ID);
+// TYPE = (int | byte | char | float | ID) // ID is STRUCT_TYPE
+Tree* parseType(Parser *p) {
+    SemType *sem=push(p, TYPE, SemType);
+    Tree *type = next(p, "int|byte|char|float|ID");
+//    char *typeName = token(type);
+//    debug("typeName=%s\n", typeName);
+//    Symbol *sym = SymTableGet(p->symTable, &Global, typeName);
+//    SymDebug(sym);
+    p->decl.typeName = token(type);
+//    sem->type = token(type);
+    return pop(p, TYPE);
+}
+
+// VAR = ** ID ([ CINT ])* (= EXP)?
+Tree* parseVar(Parser *p) {
+	SemVar *sem = push(p, VAR, SemVar);	
+	int starCount = 0;
+    while (isNext(p, "*")) { // 剖析 ** 
+        next(p, "*");
+        starCount ++;
+    }
+	sem->id = next(p, ID); // 剖析 ID
+	char *id = token(sem->id);
+	
+	// 建立 ID 的符號記錄 Symbol(id, DECL)
+//	Symbol *sym = SymNew(p->block, id, DECL);
+	Var *var = ObjNew(Var, 1);
+//	sym->u.decl = decl;
+//	SymDebug(sym);
+	var->typeName = p->decl.typeName;
+	var->dimCount = 0;
+    while (isNext(p, "[")) { // 剖析 ([ CINT ])*
+        next(p, "[");
+        Tree *cint = next(p, "CINT");
+        ASSERT(var->dimCount<DIM_MAX);
+        var->dim[var->dimCount++] = atoi(token(cint));
+        next(p, "]");
+    }
+
+    if (p->block->symType == SymStruct) {
+//        Struct *pStruct = p->block->type.pStruct;
+//        ArrayAdd(pStruct->fields, sym);
+    }
+    
+//	SymTablePut(p->symTable, sym);
+    
   if (isNext(p, "=")) {
     next(p, "=");
-    parseExp(p);
+		sem->exp = parseExp(p);
   }
-  pop(p, "VAR");  
+	return pop(p, VAR);  
 }
 
 // EXP = TERM (OP2 TERM)?
-void parseExp(Parser *p) {
-	push(p, "EXP");
-	parseTerm(p);
-	if (isNext(p, OP2)) {
-		next(p, OP2);
-		parseTerm(p);
+Tree* parseExp(Parser *p) {
+	SemExp *sem = push(p, EXP, SemExp);
+	sem->term1 = parseTerm(p);
+	if (isNext(p, SET_OP2)) {
+		sem->op = next(p, SET_OP2);
+		sem->term2 = parseTerm(p);
   }
-	pop(p, "EXP");
+	return pop(p, EXP);
 }
 
-// TERM = ( EXP (OP2 EXP)? ) | ITEM
-void parseTerm(Parser *p) {
-	push(p, "TERM");
+// TERM = ( EXP (OP2 EXP)? ) | INTEGER | FLOAT | STRING | PATH
+Tree* parseTerm(Parser *p) {
+	SemTerm *sem = push(p, TERM, SemTerm);
   if (isNext(p, "(")) {
     next(p, "(");
-    parseExp(p);
+		sem->exp1 = parseExp(p);
 	if (!isNext(p, ")")) {
-	  next(p, OP2);
-      parseExp(p);
+			next(p, SET_OP2);
+			sem->exp2 = parseExp(p);
 	}
     next(p, ")");
+	} else if (isNext(p, "CINT|CFLOAT|CSTR")) {
+	    next(p, "CINT|CFLOAT|CSTR");
 	} else
-    parseItem(p);
-	pop(p, "TERM");
-}
-
-// ITEM = INT | FLOAT | STRING | ID | ID(EXP_LIST?)
-void parseItem(Parser *p) {
-  push(p, "ITEM");
-  if (isNext(p, INTEGER))
-    next(p, INTEGER);
-  else if (isNext(p, FLOAT))
-    next(p, FLOAT);
-  else if (isNext(p, STRING))
-    next(p, STRING);
-  else if (isNext(p, ID)) {
-    next(p, ID);
-	if (isNext(p, "(")) {
-      next(p, "(");
-	  if (!isNext(p, ")"))
-	    parseExpList(p);
-	  next(p, ")");
-	}
-  }
-  pop(p, "ITEM");
-}
-
-// EXP_LIST = EXP (, EXP)*
-void parseExpList(Parser *p) {
-  push(p, "EXP_LIST");
-  parseExp(p);
-  while (isNext(p, ",")) {
-    next(p, ",");
-    parseExp(p);
-  }
-  pop(p, "EXP_LIST");  
+        parsePath(p);
+	return pop(p, TERM);
 }
 
 // VAR_LIST = VAR (, VAR)*
-void parseVarList(Parser *p) {
-  push(p, "VAR_LIST");
-  parseVar(p);
+Tree* parseVarList(Parser *p) {
+	SemVarList *sem = push(p, VAR_LIST, SemVarList);
+	parseVar(p);
   while (isNext(p, ",")) {
     next(p, ",");
-    parseVar(p);
+		parseVar(p);
   }
-  pop(p, "VAR_LIST");  
+	return pop(p, VAR_LIST);  
 }
 
-// DECL_LIST = DECL (, DECL)*
-void parseDeclList(Parser *p) {
-  push(p, "DECL_LIST");
-  parseDecl(p);
+// EXP_LIST = EXP (, EXP)*
+Tree* parseExpList(Parser *p) {
+	SemExpList *sem = push(p, EXP_LIST, SemExpList);
+	parseExp(p);
   while (isNext(p, ",")) {
     next(p, ",");
+		parseExp(p);
+  }
+	return pop(p, EXP_LIST);  
+}
+
+// DECL_LIST = DECL (; DECL)*
+Tree* parseDeclList(Parser *p) {
+	SemDeclList *sem=push(p, DECL_LIST, SemDeclList);
+  parseDecl(p);
+	while (isNext(p, ";")) {
+		next(p, ";");
     parseDecl(p);
   }
-  pop(p, "DECL_LIST");  
+	return pop(p, DECL_LIST);
 }
 
+// PARAM_LIST = PARAM (, PARAM)*
+Tree* parseParamList(Parser *p) {
+	SemParamList *sem=push(p, PARAM_LIST, SemParamList);
+	parseParam(p);
+	while (isNext(p, ";")) {
+		next(p, ";");
+   		parseParam(p);
+	}
+	return pop(p, PARAM_LIST);
+}
+
+// ========================== Library ====================================
 char* level(Parser *p) {
-  return strSpaces(p->stack->count);
-}
-
-char* nextToken(Parser *p) {
-  return (char*) p->tokens->item[p->tokenIdx];
+	return strFill(p->spaces, ' ', p->stack->count);
 }
 
 BOOL isEnd(Parser *p) {
-  return (p->tokenIdx >= p->tokens->count);
+	return isNext(p, kEND);
 }
 
-BOOL isNext(Parser *p, char *pTypes) {
-  char *token = nextToken(p);
-  if (token == NULL) return FALSE;
-  char *type = tokenToType(token);
-  char tTypes[MAX_LEN+1];
-  sprintf(tTypes, "|%s|", pTypes);
-  if (strPartOf(type, tTypes))
+BOOL isNext(Parser *p, char *pTags) {                        // 檢查下一個詞彙的型態
+    Scanner *s = p->scanner;
+	char tTags[MAX_LEN+1];
+	sprintf(tTags, "|%s|", pTags);
+	if (strPartOf(s->tag, tTags))
     return TRUE;
   else
     return FALSE;
 }
 
-char *next(Parser *p, char *pTypes) {                         // 檢查下一個詞彙的型態
-  char *token = nextToken(p);                                 // 取得下一個詞彙
-  if (isNext(p, pTypes)) {                                    // 如果是pTypes型態之一
-    char *type = tokenToType(token);                          //   取得型態
-    Tree *child = TreeNew(type, token);                       //   建立詞彙節點(token,type)
+Tree *TokenNodeNew(char *token, char *tag) {
+    Tree *node = TreeNew(tag);  //   建立詞彙節點(token,type)
+    SemToken *sem = ObjNew(SemToken, 1);
+    sem->token = strNew(token);
+    node->sem = sem;
+    return node;
+}
+
+Tree *next(Parser *p, char *pTags) {                         // 檢查下一個詞彙的型態
+    Scanner *s = p->scanner;
+	if (isNext(p, pTags)) {                                    // 如果是pTypes型態之一
+	    Tree *child = TokenNodeNew(s->token, s->tag);  //   建立詞彙節點(token,type)
     Tree *parentTree = ArrayPeek(p->stack);                   //   取得父節點，
     TreeAddChild(parentTree, child);                          //   加入父節點成為子樹
-    printf("%s idx=%d, token=%s, type=%s\n",                  //   印出詞彙以便觀察
-      level(p),p->tokenIdx,token,type);
-    p->tokenIdx++;                                            //   前進到下一個節點
-    return token;                                             //   傳回該詞彙
+		if (strEqual(s->tag, s->token))
+		   debug("%s KEY:%s\n", level(p), s->tag);
+		else
+	       debug("%s %s:%s\n", level(p), s->tag, s->token);
+        ScannerNext(s);
+		return child;                                             //   傳回該詞彙
   } else {                                                    // 否則(下一個節點型態錯誤)
-    debug("next():%s is not type(%s)\n", token, pTypes);     //   印出錯誤訊息
+		debug("next():token=%s, tag=%s is not in tag(%s)\n", s->token, s->tag, pTags);     //   印出錯誤訊息
 	ERROR();
-    p->tokenIdx++;                                            //  前進到下一個節點
     return NULL;
   }
 }
 
-Tree* push(Parser *p, char* pType) {                          // 建立 pType 型態的子樹，推入堆疊中
-  printf("%s+%s\n", level(p), pType);
-  Tree* tree = TreeNew(pType, "");
-  ArrayPush(p->stack, tree);
-  return tree;
+Tree* push1(Parser *p, char* pTag) { // 建立 pType 型態的子樹，推入堆疊中
+	debug("%s+%s\n", level(p), pTag);
+//	p->node = TreeNew(pTag);
+//	ArrayPush(p->stack, p->node);
+//	return p->node;
+	Tree *node = TreeNew(pTag);
+	ArrayPush(p->stack, node);
+	return node;
 }
 
-Tree* pop(Parser *p, char* pType) {                           // 取出 pType型態的子樹
-  Tree *tree = ArrayPop(p->stack);                            // 取得堆疊最上層的子樹
-  printf("%s-%s\n", level(p), tree->type);                    // 印出以便觀察
-  if (strcmp(tree->type, pType)!=0) {                         // 如果型態不符合
-    debug("pop(%s):should be %s\n",tree->type,pType);        //  印出錯誤訊息
+Tree* pop(Parser *p, char* pTag) { // 取出 pTag 標記的子樹
+	Tree *tree = ArrayPop(p->stack, NULL); // 取得堆疊最上層的子樹
+	debug("%s-%s\n", level(p), tree->tag); // 印出以便觀察
+	if (strcmp(tree->tag, pTag)!=0) {  // 如果型態不符合
+		debug("pop(%s):should be %s\n",tree->tag, pTag); //  印出錯誤訊息
 	ERROR();
   }
   if (p->stack->count > 0) {                                  // 如果堆疊不是空的
     Tree *parentTree = ArrayPeek(p->stack);                   //  取出上一層剖析樹
-    TreeAddChild(parentTree, tree);                           //  將建構完成的剖析樹加入上一層節點中，成為子樹
+	  TreeAddChild(parentTree, tree);  //  將建構完成的剖析樹掛到樹上，成為子樹
   }
   return tree;
 }

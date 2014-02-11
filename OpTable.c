@@ -1,9 +1,11 @@
 #include "OpTable.h"
 
 void OpTableTest() {
+	debug("=======OpTableTest()==========\n");
   OpTableNew();
   HashTableEach(opTable, (FuncPtr1) OpPrintln);  
   OpTableFree();
+    memCheck();	
 }
 
 char *opList[] = {"LD 00 L", "ST 01 L", "LB 02 L", "SB 03 L", 
@@ -12,8 +14,9 @@ char *opList[] = {"LD 00 L", "ST 01 L", "LB 02 L", "SB 03 L",
 "DIV 16 A", "AND 18 A", "OR 19 A", "XOR 1A A", "ROL 1C A", 
 "ROR 1D A", "SHL 1E A", "SHR 1F A", "JEQ 20 J", "JNE 21 J", 
 "JLT 22 J", "JGT 23 J", "JLE 24 J", "JGE 25 J", "JMP 26 J", 
-"SWI 2A J", "CALL 2B J", "RET 2C J", "PUSH 30 J", "POP 31 J", 
-"PUSHB 32 J", "POPB 33 J", "RESW F0 D", "RESB F1 D", "WORD F2 D", "BYTE F3 D"};
+"SWI 2A J", "CALL 2B J", "RET 2C J", "PUSH 30 J", "POP 31 J", "PUSHB 32 J", "POPB 33 J", 
+"LAND 40 A", "LOR 41 A", "EQ 42 A", "NE 43 A", "GT 44 A", "LT 45 A", "GE 46 A", "LE 47 A"
+"RESW F0 D", "RESB F1 D", "WORD F2 D", "BYTE F3 D"};
 
 HashTable *opTable = NULL;
 
@@ -40,12 +43,12 @@ Op* OpNew(char *opLine) {
   Op *op = ObjNew(Op, 1);
   char opName[100];
   sscanf(opLine, "%s %x %c", opName, &op->code, &op->type);
-  op->name = newStr(opName);
+	op->name = strNew(opName);
   return op;
 }
 
 void OpFree(Op *op) {
-  freeMemory(op->name);
+	memFree(op->name);
   ObjFree(op);
 }
 

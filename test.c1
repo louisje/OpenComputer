@@ -1,5 +1,5 @@
 int x=1, y=2;
-	
+
 struct Date {
     int year, month, day;
 }
@@ -10,7 +10,7 @@ struct Person {
 }
 
 int total(int* a) {
-    int s = 0;
+	int s = 0;
 	for (int i=0; i<10; i++)
 		s = s+a[i];
 	return s;

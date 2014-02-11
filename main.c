@@ -1,11 +1,13 @@
 #include "Assembler.h"                                          // ¤Þ¥Î²ÕÄ¶¾¹ÀÉÀY                
 #include "Compiler.h"                                           // ¤Þ¥Î½sÄ¶¾¹ÀÉÀY                
 
-#define TEST 0
-#define C0C  1
-#define AS0  2
-#define VM0  3
-#define M0   4
+#define UNITTEST    0
+#define TEST        1
+#define CC          2
+#define CI          3
+#define AS          4
+#define VM          5
+#define OS          6
 
 void argError(char *msg) {                                      // ³B²z°Ñ¼Æ¿ù»~ªº±¡ªp            
   printf("%s\n", msg);                                                                        
@@ -13,55 +15,49 @@ void argError(char *msg) {                                      // ³B²z°Ñ¼Æ¿ù»~ª
 }                                                                                             
                                                                                               
 int main(int argc, char *argv[]) {                              // ¥Dµ{¦¡¶}©l                    
-  char cFile0[]="test.c0", *cFile=cFile0;                       //  ¹w³]µ{¦¡ÀÉ¬° test.c0         
-  char asmFile0[]="test.asm0", *asmFile=asmFile0;               //  ¹w³]²Õ¦X»y¨¥¬°test.asm0      
-  char objFile0[]="test.obj0", *objFile=objFile0;               //  ¹w³]¥ØªºÀÉ¬° test.obj0       
-  char osAsmFile0[]="os0.asm0", *osAsmFile=osAsmFile0;
-  char osObjFile0[]="os0.obj0", *osObjFile=osObjFile0;
+	char cFile1[]="test.c1", *cFile=cFile1;                       //  ¹w³]µ{¦¡ÀÉ¬° test.c1
+	char asmFile1[]="test.asm1", *asmFile=asmFile1;               //  ¹w³]²Õ¦X»y¨¥¬°test.asm1
+	char objFile1[]="test.obj1", *objFile=objFile1;               //  ¹w³]¥ØªºÀÉ¬° test.obj1
+	char osAsmFile1[]="os0.asm1", *osAsmFile=osAsmFile1;
+	char osObjFile1[]="os0.obj1", *osObjFile=osObjFile1;
 #if TARGET==TEST  
-                                              // ¦pªG½sÄ¶¥Ø¼Ð¬° TEST           
-	//  ArrayTest();                                                  //   ´ú¸Õ°}¦Cª«¥ó                
-	//  system("pause");
-	//  HashTableTest();                                              //   ´ú¸ÕÂø´êªíª«¥ó              
-	//  OpTableTest();                                                //   ´ú¸Õ«ü¥Oªíª«¥ó              
-    printf("cFile=%s asmFile=%s\n", cFile, asmFile);
-    compile(cFile, asmFile);                                      //   ´ú¸Õ½sÄ¶¾¹                  
-    system("pause");
-    assemble(asmFile, objFile);                                   //   ´ú¸Õ²ÕÄ¶¾¹                  
-    system("pause");
-    execute(objFile, 0);                                          //   ´ú¸ÕµêÀÀ¾÷¾¹    
-
-	/*
-  assemble(osAsmFile, osObjFile);
-  system("pause");
-  M0execute(osObjFile);
-	*/
-  system("pause");
-  checkMemory();                                                //   ÀË¬d°O¾ÐÅé¨Ï¥Îª¬ªp          
-#elif TARGET==C0C                                               // ¦pªG½sÄ¶¥Ø¼Ð¬° C0C            
+    LibTest();
+	ArrayTest();                                                  //   ´ú¸Õ°}¦Cª«¥ó
+	HashTableTest();                                              //   ´ú¸ÕÂø´êªíª«¥ó
+	OpTableTest();                                                //   ´ú¸Õ«ü¥Oªíª«¥ó
+	ScannerTest("test.c1");
+	SymTableTest();
+	ParserTest("test.c1");
+#elif TARGET==CI
+//	printf("interpret:cFile=%s\n", cFile);
+//	interpret(cFile);
+#elif TARGET==CC                                               // ¦pªG½sÄ¶¥Ø¼Ð¬° C0C            
   if (argc == 3) {                                              //  ¦pªG¦³ 3 ­Ó°Ñ¼Æ             
     cFile=argv[1]; asmFile=argv[2];                             //    ³]©w°Ñ¼Æ                  
   } else                                                        //  §_«h                        
-    argError("c0c <c0File> <asmFile>");                         //    ´£¥Üµ{¦¡°õ¦æ¤èªk          
+		argError("cc1 <c0File> <asmFile>");                         //    ´£¥Üµ{¦¡°õ¦æ¤èªk          
   compile(cFile, asmFile);                                      //  ¶}©l½sÄ¶                    
-#elif TARGET==AS0                                               // ¦pªG½sÄ¶¥Ø¼Ð¬° AS0            
+#elif TARGET==AS                                               // ¦pªG½sÄ¶¥Ø¼Ð¬° AS0            
   if (argc == 3) {                                              //  ¦pªG¦³ 3 ­Ó°Ñ¼Æ             
     asmFile=argv[1]; objFile=argv[2];                           //    ³]©w°Ñ¼Æ                  
   } else                                                        //  §_«h                        
-    argError("as0 <asmFile> <objFile>");                        //    ´£¥Üµ{¦¡°õ¦æ¤èªk          
+		argError("as1 <asmFile> <objFile>");                        //    ´£¥Üµ{¦¡°õ¦æ¤èªk          
   assemble(asmFile, objFile);                                   //  ¶}©l²ÕÄ¶                    
-#elif TARGET==VM0                                               // ¦pªG½sÄ¶¥Ø¼Ð¬° VM0            
+#elif TARGET==VM                                               // ¦pªG½sÄ¶¥Ø¼Ð¬° VM0            
   if (argc == 2)                                                //  ¦pªG¦³ 2 ­Ó°Ñ¼Æ             
     objFile=argv[1];                                            //    ³]©w°Ñ¼Æ                  
   else                                                          //  §_«h                        
-    argError("vm0 <objFile>");                                  //    ´£¥Üµ{¦¡°õ¦æ¤èªk          
+		argError("vm1 <objFile>");                                  //    ´£¥Üµ{¦¡°õ¦æ¤èªk          
   execute(objFile, 0);                                          //  ¶}©l°õ¦æ (µêÀÀ¾÷)           
-#elif TARGET==M0                                               // ¦pªG½sÄ¶¥Ø¼Ð¬° M0
+#elif TARGET==OS                                               // ¦pªG½sÄ¶¥Ø¼Ð¬° OS
+	if (argc == 2)
+		osObjFile = argv[1];
+	assemble(osAsmFile, osObjFile);
+	OSexecute(objFile);
+#elif TARGET==CI                                               // ¦pªG½sÄ¶¥Ø¼Ð¬° M0
   if (argc == 2)
-    objFile = argv[1];
-  else
-    objFile = osObjFile0;
-  M0execute(objFile);
+		interpret(cFile);
 #endif                                                                                        
+    system("pause");
   return 0;
 }

@@ -1,0 +1,26 @@
+struct Person {
+  char* name;
+  int age;
+}
+
+int a[10];
+int total = sum(10);
+return total;
+
+def sum(int n) {
+    int s = 0;
+    for (int i=1; (i<=n)&&(1>0); i++)
+      s = s + i;
+	return s;
+}
+
+def total(int *a) {
+	int s = 0;
+	for (int i=0; i<10; i++)
+		s = s+a[i];
+	return s;
+}
+
+def name(Person *p) {
+	return p->name;
+}

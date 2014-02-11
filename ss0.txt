@@ -1,5 +1,0 @@
-書籍：用程式打造自己的電腦 - 從軟體到硬體
-
-作者：陳鍾誠
-
-編譯器 (Compiler) 組譯器 (Assembler) 虛擬機 (Virtual Machine) 處理器 (CPU)

@@ -11,7 +11,7 @@ void assemble(char *asmFile, char *objFile) {                   // ²ÕÄ¶¾¹ªº¥D­n¨
   AsmPass2(a);                                                  // ²Ä¤G¶¥¬q¡G«Øºc¥Øªº½X 
   AsmSaveObjFile(a, objFile);                                      
   AsmFree(a);                                                   // ¿é¥X¥ØªºÀÉ   
-  freeMemory(text);                                             // ÄÀ©ñ°O¾ÐÅé   
+	memFree(text);                                             // ÄÀ©ñ°O¾ÐÅé   
 }                                                               
 
 Assembler* AsmNew() {
@@ -70,7 +70,7 @@ void AsmPass2(Assembler *a) {                         // ²ÕÄ¶¾¹ªº²Ä¤G¶¥¬q
 
 void AsmTranslateCode(Assembler *a, AsmCode *code) {                       // «ü¥Oªº½s½X¨ç¼Æ           
   char cxCode[9]="00000000";
-  code->objCode = newMemory(code->size*2+1);
+	code->objCode = memNew(code->size*2+1);
   memset(code->objCode, '\0', code->size*2+1);                              // ¥Øªº½X¬° 0000¡K
   switch (code->type) {                                                    // ®Ú¾Ú«ü¥O«¬ºA             
     case 'J' :                                                             // ³B²z J «¬«ü¥O              
@@ -163,7 +163,7 @@ AsmCode* AsmCodeNew(char *line) {
   AsmCode* code = ObjNew(AsmCode,1);
   Array* tokens = split(line, " \t+[],", REMOVE_SPLITER);
   if (tokens->count == 0) { ArrayFree(tokens, strFree); return NULL; }
-  code->line = newStr(line);
+	code->line = strNew(line);
   strTrim(code->line, code->line, SPACE);
   code->tokens = tokens;
   int tokenIdx = 0;
@@ -201,10 +201,10 @@ void AsmCodeParse(AsmCode *code, Assembler *a) {
 }
 
 void AsmCodeFree(AsmCode *code) {
-  freeMemory(code->line);
+	memFree(code->line);
   ArrayFree(code->tokens, strFree);
-  freeMemory(code->objCode);
-  freeMemory(code);
+	memFree(code->objCode);
+	memFree(code);
 }
 
 int AsmCodeSize(AsmCode *code) {                    // ­pºâ«ü¥Oªº¤j¤p     
