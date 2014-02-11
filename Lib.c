@@ -12,14 +12,14 @@ void* newMemory(int size) {
   void *ptr=malloc(size);
   assert(ptr != NULL);
   memset(ptr, 0, size);
-//  printf("memGet:%p\n", ptr);
+	//  printf("memGet:%p\n", ptr);
   newMemoryCount++;
   return ptr;
 }
 
 int freeMemoryCount=0;
 void freeMemory(void *ptr) {
-//  printf("memFree:%p\n", ptr);
+	//  printf("memFree:%p\n", ptr);
   free(ptr);
   freeMemoryCount++;
 }

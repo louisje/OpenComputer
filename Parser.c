@@ -2,16 +2,16 @@
 /*
 BASE_LIST = BASE*
 BASE = IF | FOR | WHILE | BLOCK | METHOD | STMT ;
-IF = if (COND) BASE (else BASE)?
-FOR = for (STMT ; COND ; STMT) BASE
-WHILE = while (COND) BASE
+IF = if (EXP) BASE (else BASE)?
+FOR = for (STMT ; EXP ; STMT) BASE
+WHILE = while (EXP) BASE
 METHOD = def ID(DECL_LIST) BLOCK
 STMT = return EXP | DECL | ID (EXP_LIST) | ID = EXP | ID OP1
 DECL = TYPE VAR_LIST
 BLOCK = { BASE_LIST }
 VAR = ID (= EXP)?
-COND = EXP COND_OP EXP
-EXP = ITEM (OP2 EXP)? | ( EXP (OP2 EXP)? )
+EXP = TERM (OP2 TERM)?
+TERM = ( EXP (OP2 EXP)? ) | ITEM
 ITEM = INT | FLOAT | STRING | ID | ID(EXP_LIST?)
 EXP_LIST = EXP (, EXP)*
 VAR_LIST = VAR (, VAR)*
@@ -21,9 +21,10 @@ ID = [A-Za-z_][0-9A-Za-z_]*
 INT = [0-9]+
 FLOAT = [0-9]+.[0-9]+
 STRING = ".*"
-OP2 = [+-/*%&|^><=|'<<'|'>>']
+OP2 = +|-|/|*|%|&|&&|^|<<|>>|<|>|<=|>=|==|!=  與 | , ||
 OP1 = ++ | --
-COND_OP = |<|>|<=|>=|==|!=
+OPC = <|>|<=|>=|==|!=
+OPL = && | ||
 TYPE = int | byte | float | ptr
 */
 
@@ -45,8 +46,8 @@ void parseWhile(Parser *p);
 void parseBase(Parser *p);
 void parseStmt(Parser *p);
 void parseDecl(Parser *p);
-void parseCond(Parser *p);
 void parseExp(Parser *p);
+void parseTerm(Parser *p);
 void parseMethod(Parser *p);
 void parseItem(Parser *p);
 void parseExpList(Parser *p);
@@ -134,14 +135,14 @@ void parseMethod(Parser *p) {
   pop(p, "METHOD");
 }
 
-// FOR = for ( STMT ; COND ; STMT) BASE
+// FOR = for ( STMT ; EXP ; STMT) BASE
 void parseFor(Parser *p) {                  
   push(p, "FOR");                           // 建立 FOR 的樹根
   next(p, "for");                           // 取得 for
   next(p, "(");                             // 取得 (
   parseStmt(p);                             // 剖析 STMT
   next(p, ";");                             // 取得 ;
-  parseCond(p);                              // 剖析 COND
+	parseExp(p);                              // 剖析 EXP
   next(p, ";");                             // 取得 ;
   parseStmt(p);                             // 剖析 STMT
   next(p, ")");                             // 取得 )
@@ -149,14 +150,14 @@ void parseFor(Parser *p) {
   pop(p, "FOR");                            // 取出 FOR 的剖析樹
 }
 
-// IF = if (COND) BASE (else BASE)?
-void parseIf(Parser *p) {                  // 建立 FOR 的樹根
-  push(p, "IF");                           // 取得 for
-  next(p, "if");                           // 取得 (
-  next(p, "(");                             // 剖析 STMT
-  parseCond(p);                             // 取得 ;
-  next(p, ")");                             // 剖析 COND
-  parseBase(p);                            // 取出 FOR 的剖析樹
+// IF = if (EXP) BASE (else BASE)?
+void parseIf(Parser *p) {
+	push(p, "IF");
+	next(p, "if");
+	next(p, "(");
+	parseExp(p);
+	next(p, ")");
+	parseBase(p);
   if (isNext(p, "else")) {
     next(p, "else");
     parseBase(p);
@@ -164,12 +165,12 @@ void parseIf(Parser *p) {                  // 建立 FOR 的樹根
   pop(p, "IF");
 }
 
-// WHILE = while (COND) BASE
+// WHILE = while (EXP) BASE
 void parseWhile(Parser *p) {                  // 建立 FOR 的樹根
   push(p, "WHILE");                           // 取得 for
   next(p, "while");                           // 取得 (
   next(p, "(");                             // 剖析 STMT
-  parseCond(p);                             // 取得 ;
+	parseExp(p);                             // 取得 ;
   next(p, ")");                             // 剖析 BASE
   parseBase(p);                            // 取出 FOR 的剖析樹
   pop(p, "WHILE");
@@ -220,33 +221,20 @@ void parseVar(Parser *p) {
   pop(p, "VAR");  
 }
 
-/*
-// CALL = Id(EXP_LIST?)?
-void parseCall(Parser *p) {
-  push(p, "CALL");
-  next(p, "id");
-  if (isNext(p, "(")) {
-    next(p, "(");
-    if (!isNext(p, ")"))
-      parseExpList(p);
-    next(p, ")");
-  }
-  pop(p, "CALL");  
-}
-*/
-
-// COND = EXP COND_OP EXP
-void parseCond(Parser *p) {
-  push(p, "COND");
-  parseExp(p);
-  next(p, COND_OP);
-  parseExp(p);
-  pop(p, "COND");
-}
-
-// EXP = ITEM (OP2 EXP)? | ( EXP (OP2 EXP)? )
+// EXP = TERM (OP2 TERM)?
 void parseExp(Parser *p) {
-  push(p, "EXP");
+	push(p, "EXP");
+	parseTerm(p);
+	if (isNext(p, OP2)) {
+		next(p, OP2);
+		parseTerm(p);
+  }
+	pop(p, "EXP");
+}
+
+// TERM = ( EXP (OP2 EXP)? ) | ITEM
+void parseTerm(Parser *p) {
+	push(p, "TERM");
   if (isNext(p, "(")) {
     next(p, "(");
     parseExp(p);
@@ -255,14 +243,9 @@ void parseExp(Parser *p) {
       parseExp(p);
 	}
     next(p, ")");
-  } else {
+	} else
     parseItem(p);
-    if (isNext(p, OP2)) {
-      next(p, OP2);
-      parseExp(p);
-    }
-  }
-  pop(p, "EXP");
+	pop(p, "TERM");
 }
 
 // ITEM = INT | FLOAT | STRING | ID | ID(EXP_LIST?)

@@ -44,13 +44,13 @@ void ArrayAdd(Array *array, void *item) {
     int newSize = array->size*2;
     void **newItems = ObjNew(void*, newSize);
     memcpy(newItems, array->item, array->size*sizeof(void*));
-//  printf("array grow from %d to %d\n", array->count, newSize);
+		//  printf("array grow from %d to %d\n", array->count, newSize);
     ObjFree(array->item);
     array->item = newItems;
     array->size = newSize;
   }
   array->item[array->count++] = item;
-//printf("add item = %s\n", item);
+	//printf("add item = %s\n", item);
 }
 
 void* ArrayGet(Array *array, int i) {
@@ -86,7 +86,7 @@ Array* split(char *str, char *spliter, SplitMode mode) {
           ArrayAdd(tokens, newSubstr(str, begin, len));
         if (mode == KEEP_SPLITER)
           ArrayAdd(tokens, newSubstr(str, si, 1));
-//      printf("token1=%s token2=%s\n", tokens->item[ti-2], tokens->item[ti-1]);
+			//      printf("token1=%s token2=%s\n", tokens->item[ti-2], tokens->item[ti-1]);
         begin = si+1;
       }
   }

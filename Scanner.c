@@ -7,10 +7,9 @@ char FLOAT[] = "float";
 char ID[]  = "id";
 char KEYWORDS[] = "|if|else|for|while|return|def|int|byte|float|ptr|";
 char OP1[] = "|++|--|";
-char OP2[] = "|+|-|*|/|%|&|^|";
+char OP2[] = "|+|-|*|/|%|^|&|<<|>>|==|!=|<=|>=|<|>|&&||||";
 char TYPE[] = "|int|byte|float|ptr|";
-char COND_OP[] = "|==|!=|<=|>=|<|>|";
-char OP[]  = "+-*/%<=>!";
+char OP[]  = "+-*/%<=>!&|";
 
 #define ch() (scanner->text[scanner->textIdx])
 #define cnext() (scanner->textIdx++)

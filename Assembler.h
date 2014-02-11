@@ -37,5 +37,5 @@ void AsmCodeParse(AsmCode *code, Assembler *a);
 void AsmCodeFree(AsmCode *code);                    // ン篶ㄧ计             
 int AsmCodePrintln(AsmCode *code);                  // ン秆篶ㄧ计             
 char *AsmCodeArg(AsmCode *code, int i);
-                                                    // ンㄧ计             
+// ンㄧ计             
 #endif

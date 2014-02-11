@@ -20,10 +20,10 @@ int main(int argc, char *argv[]) {                              // 主程式開始
   char osObjFile0[]="os0.obj0", *osObjFile=osObjFile0;
 #if TARGET==TEST  
                                               // 如果編譯目標為 TEST           
-//  ArrayTest();                                                  //   測試陣列物件                
-//  system("pause");
-//  HashTableTest();                                              //   測試雜湊表物件              
-//  OpTableTest();                                                //   測試指令表物件              
+	//  ArrayTest();                                                  //   測試陣列物件                
+	//  system("pause");
+	//  HashTableTest();                                              //   測試雜湊表物件              
+	//  OpTableTest();                                                //   測試指令表物件              
     printf("cFile=%s asmFile=%s\n", cFile, asmFile);
     compile(cFile, asmFile);                                      //   測試編譯器                  
     system("pause");
@@ -31,11 +31,11 @@ int main(int argc, char *argv[]) {                              // 主程式開始
     system("pause");
     execute(objFile, 0);                                          //   測試虛擬機器    
 
-/*
+	/*
   assemble(osAsmFile, osObjFile);
   system("pause");
   M0execute(osObjFile);
-*/
+	*/
   system("pause");
   checkMemory();                                                //   檢查記憶體使用狀況          
 #elif TARGET==C0C                                               // 如果編譯目標為 C0C            

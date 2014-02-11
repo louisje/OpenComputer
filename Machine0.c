@@ -18,18 +18,18 @@ void M0IrqHandler(void *cpu) {
   Cpu0 *cpu0 = cpu;
   cpu0->count ++;
   if (cpu0->count % 10 == 0) { // 每 100 個指令發生一次時間中斷 
-//    printf("stepCount=%d\n", stepCount);
-//    printf("before IRQ:PC=%x LR=%x\n", PC, LR);
+		//    printf("stepCount=%d\n", stepCount);
+		//    printf("before IRQ:PC=%x LR=%x\n", PC, LR);
     LR = PC;
     PC = IrqAddress;
-//    printf("after  IRQ:PC=%x LR=%x\n", PC, LR);
-//    printf("=============\n");
+		//    printf("after  IRQ:PC=%x LR=%x\n", PC, LR);
+		//    printf("=============\n");
   }
-//  if (PC == 0x3C)
-//    printf("PC=0x3C\n");
-//     system("pause");
-//  if (stepCount % 300 == 0)
-//    system("pause");
+	//  if (PC == 0x3C)
+	//    printf("PC=0x3C\n");
+	//     system("pause");
+	//  if (stepCount % 300 == 0)
+	//    system("pause");
 }
 
 

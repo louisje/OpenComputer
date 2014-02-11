@@ -25,7 +25,10 @@ extern char KEYWORDS[];
 extern char OP1[];
 extern char OP2[];
 extern char TYPE[];
-extern char COND_OP[];
+extern char OPC[];
+extern char OPL[];
+
+//extern char COND_OP[];
 //extern char ITEM[];
 
 #endif

@@ -8,9 +8,9 @@ void HashTableTest() {
   int i;
   for (i=0; i<5; i++)
     HashTablePut(table, names[i], ids[i]);
-//  for (i=0; i<7; i++)
-//    printf("id=%s\n", HashTableGet(table, names[i]));
-//  HashTableEach(table, strPrintln);
+	//  for (i=0; i<7; i++)
+	//    printf("id=%s\n", HashTableGet(table, names[i]));
+	//  HashTableEach(table, strPrintln);
   HashTableFree(table);
 }
 

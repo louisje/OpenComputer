@@ -1,5 +1,5 @@
 CC   = gcc$(EXESUF) -D__DEBUG__
-OBJ  = Parser.o Tree.o Lib.o Scanner.o Array.o Compiler.o HashTable.o Generator.o Assembler.o Cpu0.o OpTable.o Machine0.o
+OBJ  = Parser.o Tree.o Lib.o Scanner.o Array.o Compiler.o HashTable.o Generator.o Assembler.o Cpu0.o OpTable.o Machine0.o Symbol.o Asm0.o
 LINKOBJ = $(OBJ)
 LIBS = 
 INCS = 
@@ -64,3 +64,9 @@ OpTable.o: OpTable.c
 
 Machine0.o: Machine0.c
 	$(CC) -c Machine0.c -o Machine0.o $(CFLAGS)
+
+Symbol.o: Symbol.c
+	$(CC) -c Symbol.c -o Symbol.o $(CFLAGS)
+
+Asm0.o: Asm0.c
+	$(CC) -c Asm0.c -o Asm0.o $(CFLAGS)

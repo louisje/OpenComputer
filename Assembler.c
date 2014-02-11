@@ -178,7 +178,7 @@ AsmCode* AsmCodeNew(char *line) {
   code->arg[0] = ArrayGet(tokens, tokenIdx++);
   code->arg[1] = ArrayGet(tokens, tokenIdx++);
   code->arg[2] = ArrayGet(tokens, tokenIdx++);
-//  AsmCodePrintln(code);
+	//  AsmCodePrintln(code);
   return code;
 }
 

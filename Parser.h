@@ -19,16 +19,3 @@ void ParserParse(Parser *p, char *text);   // 剖析器的剖析函數
 void ParserFree(Parser *parser);           // 釋放記憶體         
 
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-       

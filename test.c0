@@ -1,10 +1,9 @@
-    int sum = 0;
-    for (i=1; i<=10; i++)
-	{
-	  if (i % 2 == 0)
-	    sum = sum + (i*2);
-	}
-	while (i >= 0)
-	  i--;
-    return sum;
+int total = sum(10);
+return total;
 	
+def sum(int n) {
+    int s = 0;
+    for (int i=1; (i<=n)&&(1>0); i++)
+      s = s + i;
+	return s;
+}
